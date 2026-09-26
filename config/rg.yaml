@@ -1,0 +1,929 @@
+groups:
+  pattern:
+    - Regular expression
+  input:
+    - Pattern file
+    - Pre command
+    - Pre glob
+    - Search zip
+  search:
+    - Case sensitive
+    - CRLF
+    - DFA size limit
+    - Encoding
+    - Engine
+    - Fixed strings
+    - Ignore case
+    - Invert match
+    - Line regexp
+    - Max count
+    - Mmap
+    - Multiline
+    - Multiline dotall
+    - Unicode
+    - Null data
+    - PCRE2
+    - Regex size limit
+    - Smart case
+    - Stop on nonmatch
+    - Text
+    - Threads
+    - Word regexp
+    - Auto hybrid regex
+    - PCRE2 unicode
+  filter:
+    - Binary
+    - Follow
+    - Glob
+    - Glob case insensitive
+    - Hidden
+    - Iglob
+    - Ignore file
+    - Ignore file case insensitive
+    - Max depth
+    - Max filesize
+    - Ignore
+    - Ignore dot
+    - Ignore exclude
+    - Ignore files
+    - Ignore global
+    - Ignore parent
+    - Ignore vcs
+    - Require git
+    - One file system
+    - Type
+    - Type not
+    - Type add
+    - Type clear
+    - Unrestricted
+  output:
+    - After context
+    - Before context
+    - Block buffered
+    - Byte offset
+    - Color
+    - Colors
+    - Column
+    - Context
+    - Context separator
+    - Field context separator
+    - Field match separator
+    - Heading
+    - Hostname bin
+    - Hyperlink format
+    - Include zero
+    - Line buffered
+    - Line numbers
+    - Max columns
+    - Max columns preview
+    - Null byte
+    - Only matching
+    - Path separator
+    - Passthru
+    - Pretty
+    - Quiet
+    - Replace
+    - Sort
+    - Sort reverse
+    - Trim
+    - Vimgrep
+    - With filename
+    - Sort files
+  output_modes:
+    - Count
+    - Count matches
+    - Files with matches
+    - Files without match
+    - JSON
+  logging:
+    - Debug
+    - Ignore messages
+    - Messages
+    - Stats
+    - Trace
+  other:
+    - Files
+    - No config
+  info:
+    - Help
+    - Version
+    - Type list
+    - PCRE2 version
+  generate:
+    - Generate
+  common: [input, search, filter, output, output_modes, logging, other]
+modes:
+  - name: Pattern
+    usage: rg [OPTIONS] PATTERN [PATH ...]
+    options: [PATTERN, PATH, common]
+  - name: Regexp
+    usage: rg [OPTIONS] -e PATTERN ... [PATH ...]
+    options: [Regular expression, PATH, common]
+  - name: Info
+    usage: rg -h | -V | --type-list | --pcre2-version
+    options: [info]
+  - name: Generate
+    usage: rg --generate man|complete-bash|complete-zsh|complete-fish|complete-powershell
+    options: [generate]
+options:
+  - name: PATTERN
+    kind: positional
+    type: string
+    required: true
+    description: >
+      A regular expression used for searching.
+  - name: PATH
+    kind: positional
+    type: path
+    required: false
+    variadic: true
+    description: >
+      A file or directory to search. With no paths, the current directory is searched.
+  - name: Regular expression
+    kind: flag
+    type: string
+    long: --regexp
+    short: "-e"
+    repeatable: true
+    description: >
+      A pattern to search for; may be repeated. With it, positionals are paths.
+  - name: Pattern file
+    kind: flag
+    type: string
+    long: --file
+    short: "-f"
+    repeatable: true
+    description: >
+      Search for patterns from the given file, one per line.
+  - name: Pre command
+    kind: flag
+    type: string
+    long: --pre
+    short: ""
+    description: >
+      Search the standard output of COMMAND for each input path.
+  - name: Pre glob
+    kind: flag
+    type: string
+    long: --pre-glob
+    short: ""
+    repeatable: true
+    description: >
+      Only run the --pre command on paths matching GLOB.
+  - name: Search zip
+    kind: flag
+    type: bool
+    long: --search-zip
+    short: "-z"
+    negative: --no-search-zip
+    description: >
+      Search inside compressed files.
+  - name: Case sensitive
+    kind: flag
+    type: bool
+    long: --case-sensitive
+    short: "-s"
+    conflicts: [Ignore case, Smart case]
+    description: >
+      Search case sensitively (default).
+  - name: CRLF
+    kind: flag
+    type: bool
+    long: --crlf
+    short: ""
+    negative: --no-crlf
+    description: >
+      Treat CRLF as a line terminator.
+  - name: DFA size limit
+    kind: flag
+    type: size
+    long: --dfa-size-limit
+    short: ""
+    description: >
+      Upper size limit of the regex DFA.
+  - name: Encoding
+    kind: flag
+    type: string
+    long: --encoding
+    short: "-E"
+    description: >
+      Specify the text encoding of files to search.
+  - name: Engine
+    kind: flag
+    type: enum
+    long: --engine
+    short: ""
+    values: [default, pcre2, auto]
+    description: >
+      Regex engine to use.
+  - name: Fixed strings
+    kind: flag
+    type: bool
+    long: --fixed-strings
+    short: "-F"
+    negative: --no-fixed-strings
+    description: >
+      Treat all patterns as literal strings.
+  - name: Ignore case
+    kind: flag
+    type: bool
+    long: --ignore-case
+    short: "-i"
+    conflicts: [Case sensitive, Smart case]
+    description: >
+      Search case insensitively.
+  - name: Invert match
+    kind: flag
+    type: bool
+    long: --invert-match
+    short: "-v"
+    negative: --no-invert-match
+    description: >
+      Print lines that do not match.
+  - name: Line regexp
+    kind: flag
+    type: bool
+    long: --line-regexp
+    short: "-x"
+    description: >
+      Only match whole lines.
+  - name: Max count
+    kind: flag
+    type: int
+    long: --max-count
+    short: "-m"
+    description: >
+      Limit the number of matching lines per file.
+  - name: Mmap
+    kind: flag
+    type: bool
+    long: --mmap
+    short: ""
+    negative: --no-mmap
+    description: >
+      Search with memory maps when possible.
+  - name: Multiline
+    kind: flag
+    type: bool
+    long: --multiline
+    short: "-U"
+    negative: --no-multiline
+    description: >
+      Enable matching across multiple lines.
+  - name: Multiline dotall
+    kind: flag
+    type: bool
+    long: --multiline-dotall
+    short: ""
+    negative: --no-multiline-dotall
+    description: >
+      Make '.' match line terminators in multiline mode.
+  - name: Unicode
+    kind: flag
+    type: bool
+    long: --unicode
+    short: ""
+    negative: --no-unicode
+    description: >
+      Enable Unicode mode (default).
+  - name: Null data
+    kind: flag
+    type: bool
+    long: --null-data
+    short: ""
+    description: >
+      Use NUL as a line terminator.
+  - name: PCRE2
+    kind: flag
+    type: bool
+    long: --pcre2
+    short: "-P"
+    negative: --no-pcre2
+    conflicts: [Auto hybrid regex]
+    description: >
+      Use the PCRE2 regex engine.
+  - name: Regex size limit
+    kind: flag
+    type: size
+    long: --regex-size-limit
+    short: ""
+    description: >
+      Size limit of the compiled regex.
+  - name: Smart case
+    kind: flag
+    type: bool
+    long: --smart-case
+    short: "-S"
+    conflicts: [Ignore case, Case sensitive]
+    description: >
+      Case-insensitive if the pattern is all lowercase.
+  - name: Stop on nonmatch
+    kind: flag
+    type: bool
+    long: --stop-on-nonmatch
+    short: ""
+    description: >
+      Stop searching a file after a non-matching line.
+  - name: Text
+    kind: flag
+    type: bool
+    long: --text
+    short: "-a"
+    negative: --no-text
+    description: >
+      Search binary files as if they were text.
+  - name: Threads
+    kind: flag
+    type: int
+    long: --threads
+    short: "-j"
+    description: >
+      Approximate number of threads to use.
+  - name: Word regexp
+    kind: flag
+    type: bool
+    long: --word-regexp
+    short: "-w"
+    description: >
+      Only match whole words.
+  - name: Auto hybrid regex
+    kind: flag
+    type: bool
+    long: --auto-hybrid-regex
+    short: ""
+    negative: --no-auto-hybrid-regex
+    conflicts: [PCRE2]
+    description: >
+      DEPRECATED: use PCRE2 where appropriate.
+  - name: PCRE2 unicode
+    kind: flag
+    type: bool
+    long: --pcre2-unicode
+    short: ""
+    negative: --no-pcre2-unicode
+    description: >
+      Unicode mode for PCRE2 (default).
+  - name: Binary
+    kind: flag
+    type: bool
+    long: --binary
+    short: ""
+    negative: --no-binary
+    description: >
+      Search binary files.
+  - name: Follow
+    kind: flag
+    type: bool
+    long: --follow
+    short: "-L"
+    negative: --no-follow
+    description: >
+      Follow symbolic links.
+  - name: Glob
+    kind: flag
+    type: string
+    long: --glob
+    short: "-g"
+    repeatable: true
+    description: >
+      Include or exclude file paths.
+  - name: Glob case insensitive
+    kind: flag
+    type: bool
+    long: --glob-case-insensitive
+    short: ""
+    negative: --no-glob-case-insensitive
+    description: >
+      Process all glob patterns case insensitively.
+  - name: Hidden
+    kind: flag
+    type: bool
+    long: --hidden
+    short: "-."
+    negative: --no-hidden
+    description: >
+      Search hidden files and directories.
+  - name: Iglob
+    kind: flag
+    type: string
+    long: --iglob
+    short: ""
+    repeatable: true
+    description: >
+      Include/exclude paths case insensitively.
+  - name: Ignore file
+    kind: flag
+    type: string
+    long: --ignore-file
+    short: ""
+    repeatable: true
+    description: >
+      Specify additional ignore files.
+  - name: Ignore file case insensitive
+    kind: flag
+    type: bool
+    long: --ignore-file-case-insensitive
+    short: ""
+    negative: --no-ignore-file-case-insensitive
+    description: >
+      Process ignore files case insensitively.
+  - name: Max depth
+    kind: flag
+    type: int
+    long: --max-depth
+    short: "-d"
+    description: >
+      Descend at most NUM directories.
+  - name: Max filesize
+    kind: flag
+    type: size
+    long: --max-filesize
+    short: ""
+    description: >
+      Ignore files larger than NUM.
+  - name: Ignore
+    kind: flag
+    type: bool
+    long: --ignore
+    short: ""
+    negative: --no-ignore
+    description: >
+      Respect ignore files (default).
+  - name: Ignore dot
+    kind: flag
+    type: bool
+    long: --ignore-dot
+    short: ""
+    negative: --no-ignore-dot
+    description: >
+      Use .ignore/.rgignore files (default).
+  - name: Ignore exclude
+    kind: flag
+    type: bool
+    long: --ignore-exclude
+    short: ""
+    negative: --no-ignore-exclude
+    description: >
+      Use local exclusion files (default).
+  - name: Ignore files
+    kind: flag
+    type: bool
+    long: --ignore-files
+    short: ""
+    negative: --no-ignore-files
+    description: >
+      Use --ignore-file arguments (default).
+  - name: Ignore global
+    kind: flag
+    type: bool
+    long: --ignore-global
+    short: ""
+    negative: --no-ignore-global
+    description: >
+      Use global ignore files (default).
+  - name: Ignore parent
+    kind: flag
+    type: bool
+    long: --ignore-parent
+    short: ""
+    negative: --no-ignore-parent
+    description: >
+      Use ignore files from parent directories (default).
+  - name: Ignore vcs
+    kind: flag
+    type: bool
+    long: --ignore-vcs
+    short: ""
+    negative: --no-ignore-vcs
+    description: >
+      Use ignore files from source control (default).
+  - name: Require git
+    kind: flag
+    type: bool
+    long: --require-git
+    short: ""
+    negative: --no-require-git
+    description: >
+      Require a git repository for .gitignore.
+  - name: One file system
+    kind: flag
+    type: bool
+    long: --one-file-system
+    short: ""
+    negative: --no-one-file-system
+    description: >
+      Skip directories on other file systems.
+  - name: Type
+    kind: flag
+    type: string
+    long: --type
+    short: "-t"
+    repeatable: true
+    description: >
+      Only search files matching TYPE.
+  - name: Type not
+    kind: flag
+    type: string
+    long: --type-not
+    short: "-T"
+    repeatable: true
+    description: >
+      Do not search files matching TYPE.
+  - name: Type add
+    kind: flag
+    type: string
+    long: --type-add
+    short: ""
+    repeatable: true
+    description: >
+      Add a new glob for a file type.
+  - name: Type clear
+    kind: flag
+    type: string
+    long: --type-clear
+    short: ""
+    repeatable: true
+    description: >
+      Clear globs for a file type.
+  - name: Unrestricted
+    kind: flag
+    type: count
+    long: --unrestricted
+    short: "-u"
+    description: >
+      Reduce the level of "smart" filtering: -u disables ignore files, -uu also searches hidden files, -uuu also searches binary files.
+  - name: After context
+    kind: flag
+    type: int
+    long: --after-context
+    short: "-A"
+    conflicts: [Context]
+    description: >
+      Show NUM lines after each match.
+  - name: Before context
+    kind: flag
+    type: int
+    long: --before-context
+    short: "-B"
+    conflicts: [Context]
+    description: >
+      Show NUM lines before each match.
+  - name: Block buffered
+    kind: flag
+    type: bool
+    long: --block-buffered
+    short: ""
+    negative: --no-block-buffered
+    description: >
+      Force block buffering.
+  - name: Byte offset
+    kind: flag
+    type: bool
+    long: --byte-offset
+    short: "-b"
+    negative: --no-byte-offset
+    description: >
+      Print the byte offset of each matching line.
+  - name: Color
+    kind: flag
+    type: enum
+    long: --color
+    short: ""
+    values: [never, auto, always, ansi]
+    description: >
+      When to use color.
+  - name: Colors
+    kind: flag
+    type: string
+    long: --colors
+    short: ""
+    repeatable: true
+    description: >
+      Configure color settings and styles.
+  - name: Column
+    kind: flag
+    type: bool
+    long: --column
+    short: ""
+    negative: --no-column
+    description: >
+      Show column numbers.
+  - name: Context
+    kind: flag
+    type: int
+    long: --context
+    short: "-C"
+    conflicts: [After context, Before context]
+    description: >
+      Show NUM lines before and after each match.
+  - name: Context separator
+    kind: flag
+    type: string
+    long: --context-separator
+    short: ""
+    description: >
+      Separator for contextual chunks.
+  - name: Field context separator
+    kind: flag
+    type: string
+    long: --field-context-separator
+    short: ""
+    description: >
+      Field context separator.
+  - name: Field match separator
+    kind: flag
+    type: string
+    long: --field-match-separator
+    short: ""
+    description: >
+      Field match separator.
+  - name: Heading
+    kind: flag
+    type: bool
+    long: --heading
+    short: ""
+    negative: --no-heading
+    description: >
+      Print matches grouped by file.
+  - name: Hostname bin
+    kind: flag
+    type: string
+    long: --hostname-bin
+    short: ""
+    description: >
+      Run a program to get the hostname.
+  - name: Hyperlink format
+    kind: flag
+    type: string
+    long: --hyperlink-format
+    short: ""
+    description: >
+      Format of hyperlinks.
+  - name: Include zero
+    kind: flag
+    type: bool
+    long: --include-zero
+    short: ""
+    negative: --no-include-zero
+    description: >
+      Include zero matches in summary output.
+  - name: Line buffered
+    kind: flag
+    type: bool
+    long: --line-buffered
+    short: ""
+    negative: --no-line-buffered
+    description: >
+      Force line buffering.
+  - name: Line numbers
+    kind: flag
+    type: bool
+    long: --line-number
+    short: "-n"
+    negative: --no-line-number
+    description: >
+      Show line numbers.
+  - name: Max columns
+    kind: flag
+    type: int
+    long: --max-columns
+    short: "-M"
+    description: >
+      Omit lines longer than this limit.
+  - name: Max columns preview
+    kind: flag
+    type: bool
+    long: --max-columns-preview
+    short: ""
+    negative: --no-max-columns-preview
+    description: >
+      Show a preview for lines exceeding the limit.
+  - name: Null byte
+    kind: flag
+    type: bool
+    long: --null
+    short: "-0"
+    description: >
+      Print a NUL byte after file paths.
+  - name: Only matching
+    kind: flag
+    type: bool
+    long: --only-matching
+    short: "-o"
+    description: >
+      Print only the matched parts of a line.
+  - name: Path separator
+    kind: flag
+    type: string
+    long: --path-separator
+    short: ""
+    description: >
+      Separator for printing paths.
+  - name: Passthru
+    kind: flag
+    type: bool
+    long: --passthru
+    short: ""
+    description: >
+      Print both matching and non-matching lines.
+  - name: Pretty
+    kind: flag
+    type: bool
+    long: --pretty
+    short: "-p"
+    description: >
+      Alias for colors, headings and line numbers.
+  - name: Quiet
+    kind: flag
+    type: bool
+    long: --quiet
+    short: "-q"
+    description: >
+      Do not print anything to stdout.
+  - name: Replace
+    kind: flag
+    type: string
+    long: --replace
+    short: "-r"
+    description: >
+      Replace every match with the given text.
+  - name: Sort
+    kind: flag
+    type: enum
+    long: --sort
+    short: ""
+    values: [none, path, modified, accessed, created]
+    description: >
+      Sort results in ascending order.
+  - name: Sort reverse
+    kind: flag
+    type: enum
+    long: --sortr
+    short: ""
+    values: [none, path, modified, accessed, created]
+    description: >
+      Sort results in descending order.
+  - name: Trim
+    kind: flag
+    type: bool
+    long: --trim
+    short: ""
+    negative: --no-trim
+    description: >
+      Trim prefix whitespace from matches.
+  - name: Vimgrep
+    kind: flag
+    type: bool
+    long: --vimgrep
+    short: ""
+    description: >
+      Print results in a vim-compatible format.
+  - name: With filename
+    kind: flag
+    type: bool
+    long: --with-filename
+    short: "-H"
+    negative: --no-filename
+    description: >
+      Print the file path with each matching line.
+  - name: Sort files
+    kind: flag
+    type: bool
+    long: --sort-files
+    short: ""
+    negative: --no-sort-files
+    description: >
+      DEPRECATED: sort results by file path.
+  - name: Count
+    kind: flag
+    type: bool
+    long: --count
+    short: "-c"
+    conflicts: [Count matches, Files with matches, Files without match, JSON]
+    description: >
+      Show the count of matching lines per file.
+  - name: Count matches
+    kind: flag
+    type: bool
+    long: --count-matches
+    short: ""
+    conflicts: [Count, Files with matches, Files without match, JSON]
+    description: >
+      Show the count of every match per file.
+  - name: Files with matches
+    kind: flag
+    type: bool
+    long: --files-with-matches
+    short: "-l"
+    conflicts: [Count, Count matches, Files without match, JSON]
+    description: >
+      Print paths with at least one match.
+  - name: Files without match
+    kind: flag
+    type: bool
+    long: --files-without-match
+    short: ""
+    conflicts: [Count, Count matches, Files with matches, JSON]
+    description: >
+      Print paths that contain zero matches.
+  - name: JSON
+    kind: flag
+    type: bool
+    long: --json
+    short: ""
+    negative: --no-json
+    conflicts: [Count, Count matches, Files with matches, Files without match]
+    description: >
+      Show results in a JSON Lines format.
+  - name: Debug
+    kind: flag
+    type: bool
+    long: --debug
+    short: ""
+    description: >
+      Show debug messages.
+  - name: Ignore messages
+    kind: flag
+    type: bool
+    long: --ignore-messages
+    short: ""
+    negative: --no-ignore-messages
+    description: >
+      Show ignore parse error messages (default).
+  - name: Messages
+    kind: flag
+    type: bool
+    long: --messages
+    short: ""
+    negative: --no-messages
+    description: >
+      Show some error messages (default).
+  - name: Stats
+    kind: flag
+    type: bool
+    long: --stats
+    short: ""
+    negative: --no-stats
+    description: >
+      Print statistics about the search.
+  - name: Trace
+    kind: flag
+    type: bool
+    long: --trace
+    short: ""
+    description: >
+      Show trace messages.
+  - name: Files
+    kind: flag
+    type: bool
+    long: --files
+    short: ""
+    description: >
+      Print each file that would be searched.
+  - name: No config
+    kind: flag
+    type: bool
+    long: --no-config
+    short: ""
+    description: >
+      Never read configuration files.
+  - name: Help
+    kind: flag
+    type: bool
+    long: --help
+    short: "-h"
+    conflicts: [Version, Type list, PCRE2 version]
+    description: >
+      Print help output.
+  - name: Version
+    kind: flag
+    type: bool
+    long: --version
+    short: "-V"
+    conflicts: [Help, Type list, PCRE2 version]
+    description: >
+      Print ripgrep's version.
+  - name: Type list
+    kind: flag
+    type: bool
+    long: --type-list
+    short: ""
+    conflicts: [Help, Version, PCRE2 version]
+    description: >
+      Show all supported file types.
+  - name: PCRE2 version
+    kind: flag
+    type: bool
+    long: --pcre2-version
+    short: ""
+    conflicts: [Help, Version, Type list]
+    description: >
+      Print the version of PCRE2 that ripgrep uses.
+  - name: Generate
+    kind: flag
+    type: enum
+    long: --generate
+    short: ""
+    values: [man, complete-bash, complete-zsh, complete-fish, complete-powershell]
+    description: >
+      Generate a man page or shell completion script and quit.
