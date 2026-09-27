@@ -3,9 +3,8 @@
 A config teaches flagpick how to build one command's argv. This document is the
 full spec for the config format.
 
-> Status: this is the target format. The loader currently implements an older,
-> flat subset; `config/rg.yaml` still uses that older shape and will be migrated
-> later. Where the two differ, this document wins.
+> Status: this is the implemented format. The loader, TUI, and
+> `config/rg.yaml` all follow this spec.
 
 ---
 
@@ -210,10 +209,11 @@ Positionals (`kind: positional`) accept:
 | field         | required | meaning                                            |
 | ------------- | -------- | -------------------------------------------------- |
 | `name`        | yes      | display label and identity                         |
-| `type`        | yes      | `string`, `path`, or `passthrough` (see §6)        |
+| `type`        | yes      | `string`, `path`, `enum`, or `passthrough` (see §6) |
 | `description` | no       | shown in the description pane                      |
 | `required`    | no       | must have a value (default false)                  |
 | `variadic`    | no       | collects zero or more values; must be last          |
+| `values`      | enum     | the allowed values for `type: enum`                |
 
 A `passthrough` positional is always variadic (it collects all remaining
 tokens), so `variadic` is not a valid field on one: declaring it is an error.
@@ -331,7 +331,8 @@ A config is rejected when any of these fail:
 
 - `pool.options` entry `name`s are non-empty and unique within a node's own
   `pool.options`.
-- Flag `long` is present; enum flags have at least one `values` entry.
+- Flag `long` is present; enum options (flags and positionals) have at least
+  one `values` entry.
 - `negative` starts with `--` and differs from `long`; `negative_short` starts
   with a single `-`, differs from `short`, and has a `negative`.
 - Selection refs resolve to a visible pool entry or group.

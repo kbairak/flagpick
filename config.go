@@ -12,15 +12,12 @@ import (
 )
 
 type CommandConfig struct {
-	Options OptionsList         `yaml:"options"`
-	Groups  map[string][]string `yaml:"groups"`
-	Modes   []Mode              `yaml:"modes"`
+	// Populated from the decoded tree.
+	Flags       Flags
+	Positionals Positionals
 
-	// Populated from Options after decode.
-	Flags       Flags       `yaml:"-"`
-	Positionals Positionals `yaml:"-"`
-
-	resolved []Resolved
+	root  *RNode
+	paths []Resolved
 }
 
 // OptionsList is the ordered catalog of flags and positionals. Order is the
@@ -56,21 +53,6 @@ func decodeOption(node *yaml.Node) (Option, error) {
 		return nil, fmt.Errorf("option is missing 'kind' (flag or positional)")
 	default:
 		return nil, fmt.Errorf("unsupported option kind %q", head.Kind)
-	}
-}
-
-// splitOptions partitions the ordered options into flags and positionals for
-// the rest of the machinery.
-func (cfg *CommandConfig) splitOptions() {
-	cfg.Flags = nil
-	cfg.Positionals = nil
-	for _, o := range cfg.Options {
-		switch v := o.(type) {
-		case Flag:
-			cfg.Flags = append(cfg.Flags, v)
-		case Positional:
-			cfg.Positionals = append(cfg.Positionals, v)
-		}
 	}
 }
 
@@ -131,6 +113,12 @@ func decodePositional(node *yaml.Node) (Positional, error) {
 	case KindPath:
 		p = &PathPositional{}
 		allowed = fieldSet("kind", "name", "type", "description", "required", "variadic")
+	case KindEnum:
+		p = &EnumPositional{}
+		allowed = fieldSet("kind", "name", "type", "description", "required", "variadic", "values")
+	case KindPassthrough:
+		p = &PassthroughPositional{}
+		allowed = fieldSet("kind", "name", "type", "description", "required")
 	default:
 		return nil, fmt.Errorf("unsupported positional type %q", head.Type)
 	}
@@ -224,90 +212,31 @@ func LoadConfig(name string) (*CommandConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	dec := yaml.NewDecoder(bytes.NewReader(b))
-	dec.KnownFields(true)
-	var cfg CommandConfig
-	if err := dec.Decode(&cfg); err != nil {
-		return nil, err
-	}
-	cfg.splitOptions()
-	if err := validateConfig(&cfg); err != nil {
-		return nil, err
-	}
-	if err := cfg.buildModes(); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return parseConfig(b)
 }
 
-// validateConfig checks the split flag/positional catalog.
-func validateConfig(cfg *CommandConfig) error {
-	seen := map[string]bool{}
-	seenNeg := map[string]bool{}
-	seenNegShort := map[string]bool{}
-	for _, f := range cfg.Flags {
-		if f.OptName() == "" {
-			return fmt.Errorf("flag is missing a name")
-		}
-		if f.Long() == "" {
-			return fmt.Errorf("flag %q is missing a long form", f.OptName())
-		}
-		if seen[f.OptName()] {
-			return fmt.Errorf("duplicate flag name %q", f.OptName())
-		}
-		if e, ok := f.(*EnumFlag); ok && len(e.Allowed()) == 0 {
-			return fmt.Errorf("flag %q: enum requires at least one value", f.OptName())
-		}
-		if neg := f.Negative(); neg != "" {
-			if !strings.HasPrefix(neg, "--") {
-				return fmt.Errorf("flag %q: negative must start with --", f.OptName())
-			}
-			if neg == f.Long() {
-				return fmt.Errorf("flag %q: negative must differ from long", f.OptName())
-			}
-			if seenNeg[neg] {
-				return fmt.Errorf("duplicate negative form %q", neg)
-			}
-			seenNeg[neg] = true
-		}
-		if negShort := f.NegativeShort(); negShort != "" {
-			if !strings.HasPrefix(negShort, "-") || strings.HasPrefix(negShort, "--") {
-				return fmt.Errorf("flag %q: negative short must start with a single -", f.OptName())
-			}
-			if negShort == f.Short() {
-				return fmt.Errorf("flag %q: negative short must differ from short", f.OptName())
-			}
-			if f.Negative() == "" {
-				return fmt.Errorf("flag %q: negative short requires a negative form", f.OptName())
-			}
-			if seenNegShort[negShort] {
-				return fmt.Errorf("duplicate negative short form %q", negShort)
-			}
-			seenNegShort[negShort] = true
-		}
-		seen[f.OptName()] = true
+// parseConfig decodes a config tree and resolves it into selectable paths.
+func parseConfig(b []byte) (*CommandConfig, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	var root Node
+	if err := dec.Decode(&root); err != nil {
+		return nil, err
 	}
-	seenVariadic := false
-	for _, p := range cfg.Positionals {
-		if p.OptName() == "" {
-			return fmt.Errorf("positional is missing a name")
-		}
-		if seen[p.OptName()] {
-			return fmt.Errorf("duplicate positional name %q", p.OptName())
-		}
-		seen[p.OptName()] = true
-		if p.Variadic() {
-			if seenVariadic {
-				return fmt.Errorf("only one variadic positional is allowed")
-			}
-			seenVariadic = true
-			continue
-		}
-		if seenVariadic {
-			return fmt.Errorf("positional %q must not follow a variadic positional", p.OptName())
-		}
+	return buildConfig(&root)
+}
+
+// buildConfig validates and resolves a decoded root node.
+func buildConfig(root *Node) (*CommandConfig, error) {
+	rn, err := resolve(root, newScope())
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	cfg := &CommandConfig{root: rn}
+	if err := cfg.buildPaths(); err != nil {
+		return nil, err
+	}
+	cfg.flatten()
+	return cfg, nil
 }
 
 // ListCommands returns the sorted basenames of *.yaml configs, scanning the

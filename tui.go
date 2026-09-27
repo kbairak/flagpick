@@ -65,6 +65,12 @@ type model struct {
 	enumIndex    int
 	enumValues   []string
 	enumSel      int
+	enumFilter   string
+	subPicking   bool
+	subLevel     int
+	subPaths     []int
+	subSel       int
+	subFilter    string
 	errMsg       string
 	statusMsg    string
 	action       actionKind
@@ -121,11 +127,10 @@ func (m model) res() Resolved {
 	return m.modes[m.mode]
 }
 
-// detectMode returns the first mode that accepts the current state (see
-// acceptsAt).
+// detectMode returns the first mode that accepts the current state.
 func detectMode(modes []Resolved, session *Session) int {
 	for i := range modes {
-		if acceptsAt(modes, i, session) {
+		if modeIncludesApplied(modes[i], session) {
 			return i
 		}
 	}
@@ -171,11 +176,17 @@ func (m *model) syncMode() {
 	}
 }
 
-// modeIncludesApplied reports whether r contains every applied flag (ignoring
-// the exclusivity rule, so a manually chosen mode is respected).
+// modeIncludesApplied reports whether r contains every applied flag and
+// positional (ignoring the exclusivity rule, so a manually chosen mode or
+// subcommand is respected).
 func modeIncludesApplied(r Resolved, session *Session) bool {
 	for name, fs := range session.Flags {
 		if (fs.Checked || fs.Filled()) && !r.HasFlag(name) {
+			return false
+		}
+	}
+	for name, vals := range session.PosVals {
+		if hasValue(vals) && !r.HasPositional(name) {
 			return false
 		}
 	}
@@ -184,16 +195,37 @@ func modeIncludesApplied(r Resolved, session *Session) bool {
 
 // cycleMode switches to the next/previous mode whose parser accepts the
 // current command, re-parsing the composed argv so the state round-trips
-// (e.g. PATTERN becomes PATH). Modes that can't parse are skipped.
+// (e.g. PATTERN becomes PATH). Only mode alternatives are considered:
+// subcommands are chosen from the options pane. Modes that can't parse are
+// skipped.
 func (m *model) cycleMode(delta int) {
-	if len(m.modes) < 2 {
+	cand := m.modeSiblings()
+	if len(cand) < 2 {
 		return
 	}
+	pos := 0
+	for i, c := range cand {
+		if c == m.mode {
+			pos = i
+			break
+		}
+	}
 	tokens := Assemble(m.res(), m.session)
-	n := len(m.modes)
+	empty := sessionEmpty(m.session)
+	n := len(cand)
 	for step := 1; step <= n; step++ {
-		idx := ((m.mode+delta*step)%n + n) % n
-		session, err := prefillWith(m.cfg, m.modes[idx], tokens)
+		idx := cand[((pos+delta*step)%n+n)%n]
+		// With nothing applied there is no composed argv to re-parse, so hop
+		// directly to the next mode.
+		if empty {
+			m.mode = idx
+			m.session = NewSession(m.cfg)
+			m.filter = ""
+			m.cursor = 0
+			m.descScroll = 0
+			return
+		}
+		session, err := prefillPath(m.cfg, m.modes[idx], tokens)
 		if err != nil {
 			continue
 		}
@@ -206,10 +238,48 @@ func (m *model) cycleMode(delta int) {
 	}
 }
 
+// modeSiblings returns the path indices reachable from the current path by
+// changing only mode choices (subcommands are held fixed).
+func (m *model) modeSiblings() []int {
+	curSubs := subcommandChoices(m.res())
+	var out []int
+	for i, p := range m.modes {
+		if reflect.DeepEqual(subcommandChoices(p), curSubs) {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+func subcommandChoices(r Resolved) []BranchChoice {
+	var out []BranchChoice
+	for _, c := range r.BranchChoices {
+		if c.Kind == BranchSubcommand {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// sessionEmpty reports whether no flag or positional carries a value.
+func sessionEmpty(s *Session) bool {
+	for _, fs := range s.Flags {
+		if fs.Checked || fs.Filled() {
+			return false
+		}
+	}
+	for _, vals := range s.PosVals {
+		if hasValue(vals) {
+			return false
+		}
+	}
+	return true
+}
+
 // switchMode re-parses the current command into mode idx, reporting success.
 func (m *model) switchMode(idx int) bool {
 	tokens := Assemble(m.res(), m.session)
-	session, err := prefillWith(m.cfg, m.modes[idx], tokens)
+	session, err := prefillPath(m.cfg, m.modes[idx], tokens)
 	if err != nil {
 		return false
 	}
@@ -470,6 +540,10 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEnumKey(msg)
 	}
 
+	if m.subPicking {
+		return m.handleSubKey(msg)
+	}
+
 	if m.editing {
 		switch key {
 		case "enter":
@@ -631,25 +705,33 @@ func (m *model) printCommand() tea.Cmd {
 }
 
 // handleEnumKey drives the enum value menu (up/down choose, enter selects,
-// esc cancels).
+// esc cancels). Printable runes fuzzy-filter the values.
 func (m model) handleEnumKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.enumPicking = false
 		return m, nil
-	case "up", "ctrl+k", "k":
+	case "up", "ctrl+k":
 		if m.enumSel > 0 {
 			m.enumSel--
 		}
 		return m, nil
-	case "down", "ctrl+j", "ctrl+n", "j":
-		if m.enumSel < len(m.enumValues)-1 {
+	case "down", "ctrl+j":
+		if m.enumSel < len(m.filteredEnum())-1 {
 			m.enumSel++
 		}
 		return m, nil
+	case "backspace", "ctrl+h":
+		m.enumFilter = trimLastRune(m.enumFilter)
+		m.enumSel = 0
+		return m, nil
+	case "ctrl+w":
+		m.enumFilter = trimLastWord(m.enumFilter)
+		m.enumSel = 0
+		return m, nil
 	case "enter":
-		if m.enumSel < len(m.enumValues) {
-			m.commitEnum(m.enumValues[m.enumSel])
+		if f := m.filteredEnum(); m.enumSel < len(f) {
+			m.commitEnum(f[m.enumSel])
 		}
 		m.enumPicking = false
 		m.setCursor(m.rowIndexOfOpt(m.enumName))
@@ -658,7 +740,34 @@ func (m model) handleEnumKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.action = actionNone
 		return m, tea.Quit
 	}
+	if msg.Type == tea.KeyRunes {
+		m.enumFilter += string(msg.Runes)
+		m.enumSel = 0
+	}
+	if msg.Type == tea.KeySpace {
+		m.enumFilter += " "
+		m.enumSel = 0
+	}
 	return m, nil
+}
+
+// filteredEnum returns the enum values matching the current filter.
+func (m model) filteredEnum() []string {
+	var out []string
+	for _, v := range m.enumValues {
+		if fuzzyMatch(v, m.enumFilter) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func trimLastRune(s string) string {
+	r := []rune(s)
+	if len(r) == 0 {
+		return s
+	}
+	return string(r[:len(r)-1])
 }
 
 // openEnum opens the value menu for an enum flag.
@@ -668,18 +777,22 @@ func (m *model) openEnum(name string, index int) {
 		return
 	}
 	cur := ""
+	pos := m.isPositionalName(name)
 	if index >= 0 {
-		vs := m.session.Flags[name].Values
+		vs := m.enumState(name, pos)
 		if index < len(vs) {
 			cur = vs[index]
 		}
 	} else {
-		cur = m.session.Flags[name].First()
+		if vs := m.enumState(name, pos); len(vs) > 0 {
+			cur = vs[0]
+		}
 	}
 	m.enumPicking = true
 	m.enumName = name
 	m.enumIndex = index
 	m.enumValues = vals
+	m.enumFilter = ""
 	m.enumSel = 0
 	for i, v := range vals {
 		if v == cur {
@@ -689,8 +802,30 @@ func (m *model) openEnum(name string, index int) {
 	}
 }
 
+// enumState returns the current value list backing an enum option: flag
+// values or positional values.
+func (m *model) enumState(name string, pos bool) []string {
+	if pos {
+		return m.session.PosVals[name]
+	}
+	return m.session.Flags[name].Values
+}
+
 // commitEnum stores the chosen enum value.
 func (m *model) commitEnum(val string) {
+	if m.isPositionalName(m.enumName) {
+		vals := m.session.PosVals[m.enumName]
+		if m.enumIndex < 0 {
+			if m.isVariadic(m.enumName) {
+				m.session.PosVals[m.enumName] = append(vals, val)
+			} else {
+				m.session.PosVals[m.enumName] = []string{val}
+			}
+		} else if m.enumIndex < len(vals) {
+			vals[m.enumIndex] = val
+		}
+		return
+	}
 	state := m.session.Flags[m.enumName]
 	if m.enumIndex < 0 {
 		if m.isRepeatableFlag(m.enumName) {
@@ -704,7 +839,126 @@ func (m *model) commitEnum(val string) {
 	m.session.Flags[m.enumName] = state
 }
 
-// enumValues returns an enum flag's allowed values.
+// openSub opens the subcommand menu for the branch at level.
+func (m *model) openSub(level int) {
+	idx := m.cfg.SiblingIndices(m.res(), level)
+	if len(idx) == 0 {
+		return
+	}
+	m.subPicking = true
+	m.subLevel = level
+	m.subPaths = idx
+	m.subFilter = ""
+	m.subSel = 0
+	cur := m.res().BranchChoices[level].Index
+	for i, pi := range idx {
+		if m.modes[pi].BranchChoices[level].Index == cur {
+			m.subSel = i
+			break
+		}
+	}
+}
+
+// filteredSub returns the sibling path indices matching the current filter.
+func (m model) filteredSub() []int {
+	var out []int
+	for _, pi := range m.subPaths {
+		if fuzzyMatch(m.modes[pi].Name, m.subFilter) {
+			out = append(out, pi)
+		}
+	}
+	return out
+}
+
+// handleSubKey drives the subcommand menu (up/down choose, enter selects, esc
+// cancels). Printable runes fuzzy-filter the subcommands. Choosing one
+// switches the active path and keeps the state the new path still accepts.
+func (m model) handleSubKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.subPicking = false
+		return m, nil
+	case "up", "ctrl+k":
+		if m.subSel > 0 {
+			m.subSel--
+		}
+		return m, nil
+	case "down", "ctrl+j":
+		if m.subSel < len(m.filteredSub())-1 {
+			m.subSel++
+		}
+		return m, nil
+	case "backspace", "ctrl+h":
+		m.subFilter = trimLastRune(m.subFilter)
+		m.subSel = 0
+		return m, nil
+	case "ctrl+w":
+		m.subFilter = trimLastWord(m.subFilter)
+		m.subSel = 0
+		return m, nil
+	case "enter":
+		if f := m.filteredSub(); m.subSel < len(f) {
+			m.mode = f[m.subSel]
+		}
+		m.subPicking = false
+		m.reconcileMode()
+		m.filter = ""
+		m.cursor = 0
+		m.descScroll = 0
+		return m, nil
+	case "ctrl+c":
+		m.action = actionNone
+		return m, tea.Quit
+	}
+	if msg.Type == tea.KeyRunes {
+		m.subFilter += string(msg.Runes)
+		m.subSel = 0
+	}
+	if msg.Type == tea.KeySpace {
+		m.subFilter += " "
+		m.subSel = 0
+	}
+	return m, nil
+}
+
+// subView renders the subcommand menu.
+func (m model) subView() string {
+	cw := m.contentWidth()
+	inner := cw - 6
+	if inner < 10 {
+		inner = 10
+	}
+	normal := lipgloss.NewStyle().Padding(0, 2)
+	selected := normal.Background(lipgloss.Color("255")).Foreground(lipgloss.Color("0"))
+
+	lines := []string{titleStyle.Render(truncate("Select subcommand", inner)), ""}
+	subs := m.filteredSub()
+	if len(subs) == 0 {
+		lines = append(lines, dimStyle.Render("(no match)"))
+	}
+	for i, pi := range subs {
+		pc := m.modes[pi].BranchChoices[m.subLevel]
+		label := m.modes[pi].Name
+		if d := strings.TrimSpace(pc.Description); d != "" {
+			label += " — " + d
+		}
+		label = truncate(label, inner-2)
+		if i == m.subSel {
+			lines = append(lines, selected.Render(label))
+		} else {
+			lines = append(lines, normal.Render(label))
+		}
+	}
+	filterLine := truncate("filter: "+m.subFilter+"▏", inner)
+	lines = append(lines, "", filterLine, dimStyle.Render(truncate("type to filter · ctrl-w word · enter choose · up/down · esc cancel", inner)))
+	if maxBody := m.height - 4; maxBody > 0 && len(lines) > maxBody {
+		lines = lines[:maxBody]
+	}
+	box := boxBorder.Padding(1, 2).Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(cw, m.height, lipgloss.Center, lipgloss.Center, box)
+}
+
+// enumValues returns an enum flag's or positional's allowed values.
 func enumValues(cfg *CommandConfig, name string) []string {
 	for _, f := range cfg.Flags {
 		if f.OptName() == name {
@@ -713,7 +967,24 @@ func enumValues(cfg *CommandConfig, name string) []string {
 			}
 		}
 	}
+	for _, p := range cfg.Positionals {
+		if p.OptName() == name {
+			if e, ok := p.(*EnumPositional); ok {
+				return e.Allowed()
+			}
+		}
+	}
 	return nil
+}
+
+// isPositionalName reports whether name is a positional in this config.
+func (m model) isPositionalName(name string) bool {
+	for _, p := range m.cfg.Positionals {
+		if p.OptName() == name {
+			return true
+		}
+	}
+	return false
 }
 
 // handleActionKey drives the run/copy/print/cancel popup.
@@ -1101,6 +1372,8 @@ func (m *model) activate() tea.Cmd {
 		return nil
 	}
 	switch v := r.opt.(type) {
+	case *SubcommandOption:
+		m.openSub(v.Level)
 	case *BoolFlag:
 		m.cycleBool(r.opt.OptName(), v.Negative() != "")
 		if !v.Repeatable() {
@@ -1113,6 +1386,8 @@ func (m *model) activate() tea.Cmd {
 	case *StringPositional:
 		m.beginEdit(r.opt.OptName(), -1, firstValue(m.session.PosVals[r.opt.OptName()]), r.opt.OptName()+": ")
 	case *EnumFlag:
+		m.openEnum(r.opt.OptName(), -1)
+	case *EnumPositional:
 		m.openEnum(r.opt.OptName(), -1)
 	case *CountFlag:
 		state := m.session.Flags[r.opt.OptName()]
@@ -1127,10 +1402,13 @@ func (m *model) activate() tea.Cmd {
 	return nil
 }
 
-// isEnum reports whether opt is an enum flag.
+// isEnum reports whether opt is an enum flag or enum positional.
 func (m model) isEnum(opt Option) bool {
-	_, ok := opt.(*EnumFlag)
-	return ok
+	switch opt.(type) {
+	case *EnumFlag, *EnumPositional:
+		return true
+	}
+	return false
 }
 
 func (m model) isPath(opt Option) bool {
@@ -1385,7 +1663,7 @@ func (m *model) clearSelected() {
 		state := m.session.Flags[name]
 		state.Count = 0
 		m.session.Flags[name] = state
-	case *StringPositional, *PathPositional:
+	case *StringPositional, *PathPositional, *EnumPositional:
 		if !hasValue(m.session.PosVals[name]) {
 			return
 		}
@@ -1473,14 +1751,14 @@ func (m model) isRepeatableFlag(name string) bool {
 	return false
 }
 
-// validate checks the active mode. If exactly one mode accepts the current
-// state and validates, it is adopted.
+// validate checks the active path. If exactly one *mode alternative* of the
+// same subcommand accepts the current state and validates, it is adopted.
 func (m *model) validate() bool {
-	if acceptsAt(m.modes, m.mode, m.session) && len(MissingRequired(m.res(), m.session)) == 0 {
+	if modeIncludesApplied(m.res(), m.session) && len(MissingRequired(m.res(), m.session)) == 0 {
 		return true
 	}
 	var valid []int
-	for i := range m.modes {
+	for _, i := range m.modeSiblings() {
 		if acceptsAt(m.modes, i, m.session) && len(MissingRequired(m.modes[i], m.session)) == 0 {
 			valid = append(valid, i)
 		}
@@ -1489,15 +1767,10 @@ func (m *model) validate() bool {
 		m.mode = valid[0]
 		return true
 	}
-	base := m.res()
-	if len(MissingRequired(base, m.session)) == 0 || !acceptsAt(m.modes, m.mode, m.session) {
-		base = m.modes[0]
-	}
-	missing := MissingRequired(base, m.session)
-	if len(missing) == 0 {
-		m.errMsg = "no mode matches the current options"
-	} else {
+	if missing := MissingRequired(m.res(), m.session); len(missing) > 0 {
 		m.errMsg = "required: " + strings.Join(missing, ", ")
+	} else {
+		m.errMsg = "no mode matches the current options"
 	}
 	m.statusMsg = ""
 	return false
@@ -1519,6 +1792,9 @@ func (m model) View() string {
 	}
 	if m.enumPicking {
 		return m.enumView()
+	}
+	if m.subPicking {
+		return m.subView()
 	}
 	if m.picking {
 		return m.pickerView()
@@ -1561,11 +1837,18 @@ func (m model) View() string {
 	}
 
 	top := []string{preview, filterLine}
-	if len(m.modes) > 1 {
+	if m.modeSelectorVisible() {
 		top = append(top, m.modePicker(), m.modeUsage())
 	}
 	top = append(top, panes, status)
 	return strings.Join(top, "\n")
+}
+
+// modeSelectorVisible reports whether the horizontal mode picker should render.
+// Subcommands are chosen from the options pane instead, so a tree with no mode
+// forks (a pure dispatcher like direnv) hides it.
+func (m model) modeSelectorVisible() bool {
+	return len(m.modes) > 1 && m.res().HasBranchKind(BranchMode)
 }
 
 // modePicker renders the horizontal mode selector.
@@ -1635,7 +1918,7 @@ func (m model) contentWidth() int {
 // border.
 func (m model) paneHeight() int {
 	extra := 0
-	if len(m.modes) > 1 {
+	if m.modeSelectorVisible() {
 		extra = 2 // mode picker + usage line
 	}
 	h := m.height - 6 - extra
@@ -1809,6 +2092,8 @@ func renderRow(m model, r row, content int) string {
 	}
 
 	switch v := r.opt.(type) {
+	case *SubcommandOption:
+		return truncate("Command: "+v.Label, content)
 	case *BoolFlag:
 		fs := m.session.Flags[name]
 		glyph := "[ ]"
@@ -1827,6 +2112,8 @@ func renderRow(m model, r row, content int) string {
 		if m.editing && m.editingName == name && m.editingIndex < 0 {
 			return m.editingLabel + m.input.View()
 		}
+		return truncate(name+": "+firstValue(m.session.PosVals[name]), content)
+	case *EnumPositional:
 		return truncate(name+": "+firstValue(m.session.PosVals[name]), content)
 	case *StringFlag, *IntFlag, *EnumFlag, *SizeFlag:
 		if m.editing && m.editingName == name && m.editingIndex < 0 {
@@ -1866,7 +2153,11 @@ func (m model) enumView() string {
 	selected := normal.Background(lipgloss.Color("255")).Foreground(lipgloss.Color("0"))
 
 	lines := []string{titleStyle.Render(truncate("Select "+m.enumName, inner)), ""}
-	for i, v := range m.enumValues {
+	values := m.filteredEnum()
+	if len(values) == 0 {
+		lines = append(lines, dimStyle.Render("(no match)"))
+	}
+	for i, v := range values {
 		label := truncate(v, inner-2)
 		if i == m.enumSel {
 			lines = append(lines, selected.Render(label))
@@ -1874,7 +2165,8 @@ func (m model) enumView() string {
 			lines = append(lines, normal.Render(label))
 		}
 	}
-	lines = append(lines, "", dimStyle.Render(truncate("enter choose · up/down or j/k · esc cancel", inner)))
+	filterLine := truncate("filter: "+m.enumFilter+"▏", inner)
+	lines = append(lines, "", filterLine, dimStyle.Render(truncate("type to filter · ctrl-w word · enter choose · up/down · esc cancel", inner)))
 	if maxBody := m.height - 4; maxBody > 0 && len(lines) > maxBody {
 		lines = lines[:maxBody]
 	}
@@ -1969,6 +2261,7 @@ func (m model) helpView() string {
 		"space           toggle flag / edit value / add value",
 		"space on path   open the file/dir picker",
 		"space on enum   choose value from a menu",
+		"space on command choose the subcommand",
 		"space on count  cycle repeats (0-3)",
 		"enter           open command menu (run/copy/print/cancel)",
 		"ctrl-x          clear selected entry (uncheck/empty)",

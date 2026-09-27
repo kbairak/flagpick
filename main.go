@@ -128,7 +128,7 @@ func runCommand(cmd string, toolArgs []string, resume bool) {
 		fmt.Fprintln(os.Stdout, ShellQuote(append([]string{cmd}, Assemble(m.res(), m.session)...)))
 	case actionRun:
 		argv := append([]string{cmd}, Assemble(m.res(), m.session)...)
-		fmt.Fprintln(os.Stdout, ShellQuote(argv))
+		fmt.Fprintln(os.Stdout, "$ "+ShellQuote(argv))
 		path, err := exec.LookPath(cmd)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "cannot run %q: %v\n", cmd, err)

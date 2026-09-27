@@ -1,14 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var (
@@ -18,20 +18,7 @@ var (
 
 func parseConfigBytes(t *testing.T, b []byte) (*CommandConfig, error) {
 	t.Helper()
-	dec := yaml.NewDecoder(bytes.NewReader(b))
-	dec.KnownFields(true)
-	var cfg CommandConfig
-	if err := dec.Decode(&cfg); err != nil {
-		return nil, err
-	}
-	cfg.splitOptions()
-	if err := validateConfig(&cfg); err != nil {
-		return nil, err
-	}
-	if err := cfg.buildModes(); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return parseConfig(b)
 }
 
 func TestParseRealConfig(t *testing.T) {
@@ -145,6 +132,149 @@ func TestParseRealConfig(t *testing.T) {
 	}
 }
 
+func TestParseDirenvConfig(t *testing.T) {
+	b, err := os.ReadFile("config/direnv.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	cfg, err := parseConfigBytes(t, b)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var names []string
+	for _, r := range cfg.Resolved() {
+		names = append(names, r.Name)
+	}
+	want := []string{
+		"allow", "block", "edit", "exec", "export", "fetchurl", "help",
+		"hook", "prune", "reload", "status", "stdlib", "version", "log",
+	}
+	if !reflect.DeepEqual(names, want) {
+		t.Fatalf("paths = %v, want %v", names, want)
+	}
+
+	// A dispatcher opens with no tokens (the TUI picks the first path).
+	if _, err := Prefill(cfg, nil); err != nil {
+		t.Fatalf("empty prefill: %v", err)
+	}
+
+	// Aliases resolve to the canonical verb, and exec's tail is a passthrough.
+	s, err := Prefill(cfg, []string{"grant"})
+	if err != nil {
+		t.Fatalf("prefill alias: %v", err)
+	}
+	if got := Assemble(cfg.Resolved()[0], s); !reflect.DeepEqual(got, []string{"allow"}) {
+		t.Fatalf("alias assemble = %v, want [allow]", got)
+	}
+	s, err = Prefill(cfg, []string{"exec", "./proj", "rg", "--json", "-i", "foo"})
+	if err != nil {
+		t.Fatalf("prefill exec: %v", err)
+	}
+	got := Assemble(cfg.Resolved()[3], s)
+	wantArgv := []string{"exec", "./proj", "rg", "--json", "-i", "foo"}
+	if !reflect.DeepEqual(got, wantArgv) {
+		t.Fatalf("exec assemble = %v, want %v", got, wantArgv)
+	}
+}
+
+func TestSubcommandMenuShowsDescriptions(t *testing.T) {
+	b, err := os.ReadFile("config/direnv.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	cfg, err := parseConfigBytes(t, b)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	sess, err := Prefill(cfg, nil)
+	if err != nil {
+		t.Fatalf("prefill: %v", err)
+	}
+	m := newModel("direnv", cfg, sess)
+	upd, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	m = upd.(model)
+	var sub *SubcommandOption
+	for _, o := range m.listOptions() {
+		if so, ok := o.(*SubcommandOption); ok {
+			sub = so
+		}
+	}
+	if sub == nil {
+		t.Fatal("no subcommand selector")
+	}
+	m.openSub(sub.Level)
+	view := m.subView()
+	if !strings.Contains(view, "allow") || !strings.Contains(view, "Grants direnv permission") {
+		t.Fatalf("menu does not show the subcommand description:\n%s", view)
+	}
+
+	// Choosing a flag-less subcommand must stick: validate and assemble it.
+	for i, pi := range m.subPaths {
+		if m.modes[pi].Name == "help" {
+			m.subSel = i
+		}
+	}
+	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+	if m.res().Name != "help" {
+		t.Fatalf("selected path = %q, want help", m.res().Name)
+	}
+	if !m.validate() {
+		t.Fatalf("help should validate: %s", m.errMsg)
+	}
+	if got := Assemble(m.res(), m.session); !reflect.DeepEqual(got, []string{"help"}) {
+		t.Fatalf("assemble = %v, want [help]", got)
+	}
+}
+
+func TestRequiredSubcommandArgBlocksRun(t *testing.T) {
+	b, err := os.ReadFile("config/direnv.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	cfg, err := parseConfigBytes(t, b)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	sess, err := Prefill(cfg, nil)
+	if err != nil {
+		t.Fatalf("prefill: %v", err)
+	}
+	m := newModel("direnv", cfg, sess)
+	upd, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	m = upd.(model)
+
+	var sub *SubcommandOption
+	for _, o := range m.listOptions() {
+		if so, ok := o.(*SubcommandOption); ok {
+			sub = so
+		}
+	}
+	m.openSub(sub.Level)
+	for i, pi := range m.subPaths {
+		if m.modes[pi].Name == "hook" {
+			m.subSel = i
+		}
+	}
+	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+	if m.res().Name != "hook" {
+		t.Fatalf("selected %q, want hook", m.res().Name)
+	}
+
+	// A missing required positional must fail validation and must not silently
+	// switch to another subcommand.
+	if m.validate() {
+		t.Fatal("hook without a shell should not validate")
+	}
+	if !strings.Contains(m.errMsg, "Hook shell") {
+		t.Fatalf("errMsg = %q, want it to mention Hook shell", m.errMsg)
+	}
+	if m.res().Name != "hook" {
+		t.Fatalf("path changed to %q; must stay hook", m.res().Name)
+	}
+}
+
 func TestInvalidConfigs(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -162,57 +292,57 @@ func TestInvalidConfigs(t *testing.T) {
 		},
 		{
 			name:    "unknown option field",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    nope: 1\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n      long: --x\n      nope: 1\n",
 			wantSub: "unknown field",
 		},
 		{
 			name:    "unsupported flag type",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: number\n    long: --x\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: number\n      long: --x\n",
 			wantSub: "unsupported flag type",
 		},
 		{
 			name:    "unsupported positional type",
-			yaml:    "options:\n  - name: X\n    kind: positional\n    type: integer\n",
+			yaml:    "pool:\n  options:\n    - name: X\n      kind: positional\n      type: integer\n",
 			wantSub: "unsupported positional type",
 		},
 		{
 			name:    "missing flag name",
-			yaml:    "options:\n  - kind: flag\n    type: bool\n    long: --x\n",
+			yaml:    "pool:\n  options:\n    - kind: flag\n      type: bool\n      long: --x\n",
 			wantSub: "missing a name",
 		},
 		{
 			name:    "missing long form",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n",
 			wantSub: "missing a long form",
 		},
 		{
 			name:    "duplicate flag names",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n  - name: x\n    kind: flag\n    type: bool\n    long: --y\n",
-			wantSub: "duplicate flag name",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n      long: --x\n    - name: x\n      kind: flag\n      type: bool\n      long: --y\n",
+			wantSub: "duplicate option name",
 		},
 		{
 			name:    "positional after variadic",
-			yaml:    "options:\n  - name: X\n    kind: positional\n    type: string\n    variadic: true\n  - name: Y\n    kind: positional\n    type: string\n",
+			yaml:    "pool:\n  options:\n    - {name: X, kind: positional, type: string, variadic: true}\n    - {name: Y, kind: positional, type: string}\noptions: [X, Y]\n",
 			wantSub: "must not follow a variadic",
 		},
 		{
 			name:    "two variadics",
-			yaml:    "options:\n  - name: X\n    kind: positional\n    type: string\n    variadic: true\n  - name: Y\n    kind: positional\n    type: string\n    variadic: true\n",
+			yaml:    "pool:\n  options:\n    - {name: X, kind: positional, type: string, variadic: true}\n    - {name: Y, kind: positional, type: string, variadic: true}\noptions: [X, Y]\n",
 			wantSub: "only one variadic",
 		},
 		{
 			name:    "negative short without negative",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    negative_short: \"-y\"\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n      long: --x\n      negative_short: \"-y\"\n",
 			wantSub: "requires a negative form",
 		},
 		{
 			name:    "negative short double dash",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    negative: --no-x\n    negative_short: \"--y\"\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n      long: --x\n      negative: --no-x\n      negative_short: \"--y\"\n",
 			wantSub: "negative short must start with a single -",
 		},
 		{
 			name:    "negative short equals short",
-			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    short: \"-x\"\n    negative: --no-x\n    negative_short: \"-x\"\n",
+			yaml:    "pool:\n  options:\n    - name: x\n      kind: flag\n      type: bool\n      long: --x\n      short: \"-x\"\n      negative: --no-x\n      negative_short: \"-x\"\n",
 			wantSub: "negative short must differ from short",
 		},
 	}
@@ -240,7 +370,7 @@ func TestConfigNotFound(t *testing.T) {
 }
 
 func minimalConfig(flagName string) []byte {
-	return []byte("options:\n  - name: " + flagName + "\n    kind: flag\n    type: bool\n    long: --x\n")
+	return []byte("pool:\n  options:\n    - name: " + flagName + "\n      kind: flag\n      type: bool\n      long: --x\noptions: [" + flagName + "]\n")
 }
 
 func TestFindConfig(t *testing.T) {

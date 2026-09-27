@@ -8,22 +8,23 @@ import (
 
 func TestNestedGroupExpansion(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
-options:
-  - name: A
-    kind: flag
-    type: bool
-    long: --a
-  - name: B
-    kind: flag
-    type: bool
-    long: --b
-  - name: C
-    kind: flag
-    type: bool
-    long: --c
-groups:
-  inner: [A, B]
-  outer: [inner, C]
+pool:
+  options:
+    - name: A
+      kind: flag
+      type: bool
+      long: --a
+    - name: B
+      kind: flag
+      type: bool
+      long: --b
+    - name: C
+      kind: flag
+      type: bool
+      long: --c
+  groups:
+    inner: [A, B]
+    outer: [inner, C]
 modes:
   - name: M
     options: [outer]
@@ -49,12 +50,12 @@ func TestNestedGroupErrors(t *testing.T) {
 	}{
 		{
 			name:    "cycle",
-			yaml:    "options:\n  - name: A\n    kind: flag\n    type: bool\n    long: --a\ngroups:\n  x: [y]\n  y: [x]\nmodes:\n  - name: M\n    options: [x]\n",
+			yaml:    "pool:\n  options:\n    - name: A\n      kind: flag\n      type: bool\n      long: --a\n  groups:\n    x: [y]\n    y: [x]\nmodes:\n  - name: M\n    options: [x]\n",
 			wantSub: "cycle",
 		},
 		{
 			name:    "unknown",
-			yaml:    "options:\n  - name: A\n    kind: flag\n    type: bool\n    long: --a\ngroups:\n  x: [nope]\nmodes:\n  - name: M\n    options: [x]\n",
+			yaml:    "pool:\n  options:\n    - name: A\n      kind: flag\n      type: bool\n      long: --a\n  groups:\n    x: [nope]\nmodes:\n  - name: M\n    options: [x]\n",
 			wantSub: "unknown option or group",
 		},
 	}

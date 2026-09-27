@@ -10,33 +10,35 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const tuiFixture = `options:
-  - name: Ignore case
-    kind: flag
-    type: bool
-    long: --ignore-case
-    short: -i
-    description: >
-      Toggle case-insensitive matching. This description is intentionally long so
-      that the description pane has to wrap it across several lines and, at small
-      heights, scroll it.
-  - name: Smart case
-    kind: flag
-    type: bool
-    long: --smart-case
-    short: -S
-    description: Smart case matching.
-  - name: PATTERN
-    kind: positional
-    type: string
-    required: true
-    description: A regular expression used for searching.
-  - name: PATH
-    kind: positional
-    type: string
-    required: false
-    variadic: true
-    description: A file or directory to search.
+const tuiFixture = `pool:
+  options:
+    - name: Ignore case
+      kind: flag
+      type: bool
+      long: --ignore-case
+      short: -i
+      description: >
+        Toggle case-insensitive matching. This description is intentionally long so
+        that the description pane has to wrap it across several lines and, at small
+        heights, scroll it.
+    - name: Smart case
+      kind: flag
+      type: bool
+      long: --smart-case
+      short: -S
+      description: Smart case matching.
+    - name: PATTERN
+      kind: positional
+      type: string
+      required: true
+      description: A regular expression used for searching.
+    - name: PATH
+      kind: positional
+      type: string
+      required: false
+      variadic: true
+      description: A file or directory to search.
+options: [Ignore case, Smart case, PATTERN, PATH]
 `
 
 func testModel(t *testing.T) model {
@@ -52,13 +54,15 @@ func testModel(t *testing.T) model {
 	return newModel("rg", cfg, sess)
 }
 
-const pathFixture = `options:
-  - name: PATH
-    kind: positional
-    type: path
-    required: false
-    variadic: true
-    description: A file or directory to search.
+const pathFixture = `pool:
+  options:
+    - name: PATH
+      kind: positional
+      type: path
+      required: false
+      variadic: true
+      description: A file or directory to search.
+options: [PATH]
 `
 
 func testPathModel(t *testing.T) model {
@@ -74,21 +78,23 @@ func testPathModel(t *testing.T) model {
 	return newModel("rg", cfg, sess)
 }
 
-const valueFixture = `options:
-  - name: Replace
-    kind: flag
-    type: string
-    long: --replace
-    short: -r
-  - name: After context
-    kind: flag
-    type: int
-    long: --after-context
-    short: -A
-  - name: PATTERN
-    kind: positional
-    type: string
-    required: true
+const valueFixture = `pool:
+  options:
+    - name: Replace
+      kind: flag
+      type: string
+      long: --replace
+      short: -r
+    - name: After context
+      kind: flag
+      type: int
+      long: --after-context
+      short: -A
+    - name: PATTERN
+      kind: positional
+      type: string
+      required: true
+options: [Replace, After context, PATTERN]
 `
 
 func testValueModel(t *testing.T) model {
@@ -875,21 +881,22 @@ func TestFuzzyMatchCaseInsensitive(t *testing.T) {
 	}
 }
 
-const modesFixture = `options:
-  - name: E
-    kind: flag
-    type: string
-    long: --regexp
-    short: -e
-    repeatable: true
-  - name: PATTERN
-    kind: positional
-    type: string
-    required: true
-  - name: PATH
-    kind: positional
-    type: path
-    variadic: true
+const modesFixture = `pool:
+  options:
+    - name: E
+      kind: flag
+      type: string
+      long: --regexp
+      short: -e
+      repeatable: true
+    - name: PATTERN
+      kind: positional
+      type: string
+      required: true
+    - name: PATH
+      kind: positional
+      type: path
+      variadic: true
 modes:
   - name: Pattern
     usage: rg [OPTIONS] PATTERN [PATH ...]
@@ -1016,15 +1023,17 @@ func TestCursorCycle(t *testing.T) {
 // order (positionals can lead).
 func TestPositionalFirstConfig(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
-options:
-  - name: P
-    kind: positional
-    type: string
-    required: true
-  - name: F
-    kind: flag
-    type: bool
-    long: --f
+pool:
+  options:
+    - name: P
+      kind: positional
+      type: string
+      required: true
+    - name: F
+      kind: flag
+      type: bool
+      long: --f
+options: [P, F]
 `))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -1132,12 +1141,14 @@ func TestModeSkipNonEmpty(t *testing.T) {
 // TestEnumMenu checks space opens a value menu for enum flags.
 func TestEnumMenu(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
-options:
-  - name: Color
-    kind: flag
-    type: enum
-    long: --color
-    values: [never, auto, always]
+pool:
+  options:
+    - name: Color
+      kind: flag
+      type: enum
+      long: --color
+      values: [never, auto, always]
+options: [Color]
 `))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -1166,10 +1177,57 @@ options:
 	}
 }
 
+// TestEnumMenuFuzzy checks typing in the enum menu filters the values.
+func TestEnumMenuFuzzy(t *testing.T) {
+	cfg, err := parseConfigBytes(t, []byte(`
+pool:
+  options:
+    - name: Color
+      kind: flag
+      type: enum
+      long: --color
+      values: [never, auto, always]
+options: [Color]
+`))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	sess, _ := Prefill(cfg, nil)
+	m := newModel("rg", cfg, sess)
+	m.setCursor(m.rowIndexOf("Color"))
+
+	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
+	m = opened.(model)
+	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("al")})
+	m = typed.(model)
+	if m.enumFilter != "al" {
+		t.Fatalf("filter = %q, want al", m.enumFilter)
+	}
+	if got := m.filteredEnum(); !reflect.DeepEqual(got, []string{"always"}) {
+		t.Fatalf("filtered = %v, want [always]", got)
+	}
+	// ctrl-w deletes the last filter word.
+	cleared, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlW})
+	m = cleared.(model)
+	if m.enumFilter != "" {
+		t.Fatalf("filter after ctrl-w = %q, want empty", m.enumFilter)
+	}
+	if got := m.filteredEnum(); len(got) != 3 {
+		t.Fatalf("filtered after ctrl-w = %v, want all", got)
+	}
+	typed, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("al")})
+	m = typed.(model)
+	chosen, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = chosen.(model)
+	if got := m.session.Flags["Color"].First(); got != "always" {
+		t.Fatalf("chosen = %q, want always", got)
+	}
+}
+
 // TestCountFlagCycle checks space cycles a count flag 0..3.
 func TestCountFlagCycle(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(
-		"options:\n  - name: U\n    kind: flag\n    type: count\n    long: --unrestricted\n    short: -u\n",
+		"pool:\n  options:\n    - name: U\n      kind: flag\n      type: count\n      long: --unrestricted\n      short: -u\noptions: [U]\n",
 	))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -1190,12 +1248,14 @@ func TestCountFlagCycle(t *testing.T) {
 // TestNullableBoolCycle checks the three-state cycle and glyphs.
 func TestNullableBoolCycle(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
-options:
-  - name: Heading
-    kind: flag
-    type: bool
-    long: --heading
-    negative: --no-heading
+pool:
+  options:
+    - name: Heading
+      kind: flag
+      type: bool
+      long: --heading
+      negative: --no-heading
+options: [Heading]
 `))
 	if err != nil {
 		t.Fatalf("parse: %v", err)

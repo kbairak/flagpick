@@ -1,0 +1,107 @@
+description: Manages environment variables per directory.
+
+pool:
+  options:
+    - {name: PATH_TO_RC,     kind: positional, type: string, required: false}
+    - {name: DIR,            kind: positional, type: path,   required: true}
+    - {name: ARGS,           kind: positional, type: passthrough, required: true}
+    - name: Export shell
+      kind: positional
+      type: enum
+      required: true
+      values: [elvish, fish, gha, gzenv, json, murex, tcsh, vim, bash, zsh, pwsh, systemd]
+      description: The shell dialect to emit exports for.
+    - name: Hook shell
+      kind: positional
+      type: enum
+      required: true
+      values: [bash, zsh, fish, tcsh, elvish, pwsh, murex]
+      description: The shell to install the hook for.
+    - {name: URL,            kind: positional, type: string, required: true}
+    - {name: INTEGRITY_HASH, kind: positional, type: string, required: false}
+    - {name: SHOW_PRIVATE,   kind: positional, type: string, required: false}
+    - {name: VERSION_AT_LEAST, kind: positional, type: string, required: false}
+    - {name: MESSAGE,        kind: positional, type: string, required: true}
+    - {name: JSON,   kind: flag, type: bool, long: --json, description: Show the status as JSON.}
+    - {name: Status, kind: flag, type: bool, long: --status, conflicts: [Error]}
+    - {name: Error,  kind: flag, type: bool, long: --error,  conflicts: [Status]}
+
+usage: direnv COMMAND [...ARGS]
+
+subcommands:
+  - name: allow
+    aliases: [permit, grant]
+    description: Grants direnv permission to load the given .envrc or .env file.
+    usage: direnv allow [PATH_TO_RC]
+    options: [PATH_TO_RC]
+
+  - name: block
+    aliases: [deny, disallow, revoke]
+    description: Revokes the authorization of a given .envrc or .env file.
+    usage: direnv block [PATH_TO_RC]
+    options: [PATH_TO_RC]
+
+  - name: edit
+    description: Opens PATH_TO_RC or the current .envrc or .env into an $EDITOR and allows the file to be loaded afterwards.
+    usage: direnv edit [PATH_TO_RC]
+    options: [PATH_TO_RC]
+
+  - name: exec
+    description: Executes a command after loading the first .envrc or .env found in DIR.
+    usage: direnv exec DIR COMMAND [...ARGS]
+    options: [DIR, ARGS]
+
+  - name: export
+    description: >
+      Loads an .envrc or .env and prints the diff in terms of exports.
+      Supported SHELL values are: elvish, fish, gha, gzenv, json, murex,
+      tcsh, vim, bash, zsh, pwsh, systemd.
+    usage: direnv export SHELL
+    options: [Export shell]
+
+  - name: fetchurl
+    description: Fetches a given URL into direnv's CAS.
+    usage: direnv fetchurl <url> [<integrity-hash>]
+    options: [URL, INTEGRITY_HASH]
+
+  - name: help
+    description: Shows this help.
+    usage: direnv help [SHOW_PRIVATE]
+    options: [SHOW_PRIVATE]
+
+  - name: hook
+    description: >
+      Used to set up the shell hook. Supported SHELL values are: bash, zsh,
+      fish, tcsh, elvish, pwsh, murex.
+    usage: direnv hook SHELL
+    options: [Hook shell]
+
+  - name: prune
+    description: Removes old allowed files.
+    usage: direnv prune
+    options: []
+
+  - name: reload
+    description: Triggers an env reload.
+    usage: direnv reload
+    options: []
+
+  - name: status
+    description: Prints some debug status information.
+    usage: direnv status [--json]
+    options: [JSON]
+
+  - name: stdlib
+    description: Displays the stdlib available in the .envrc execution context.
+    usage: direnv stdlib
+    options: []
+
+  - name: version
+    description: Prints the version or checks that direnv is older than VERSION_AT_LEAST.
+    usage: direnv version [VERSION_AT_LEAST]
+    options: [VERSION_AT_LEAST]
+
+  - name: log
+    description: Logs a given message.
+    usage: direnv log [--status | --error] <message>
+    options: [Status, Error, MESSAGE]

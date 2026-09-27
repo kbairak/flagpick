@@ -3,13 +3,14 @@ package main
 type OptionKind string
 
 const (
-	KindBool   OptionKind = "bool"
-	KindString OptionKind = "string"
-	KindInt    OptionKind = "int"
-	KindEnum   OptionKind = "enum"
-	KindSize   OptionKind = "size"
-	KindCount  OptionKind = "count"
-	KindPath   OptionKind = "path"
+	KindBool        OptionKind = "bool"
+	KindString      OptionKind = "string"
+	KindInt         OptionKind = "int"
+	KindEnum        OptionKind = "enum"
+	KindSize        OptionKind = "size"
+	KindCount       OptionKind = "count"
+	KindPath        OptionKind = "path"
+	KindPassthrough OptionKind = "passthrough"
 )
 
 // BaseOption holds fields common to every flag and positional.
@@ -27,6 +28,15 @@ type Option interface {
 	OptName() string
 	OptType() OptionKind
 	OptDescription() string
+}
+
+// SubcommandOption is a TUI-only pseudo option that selects a subcommand from
+// a shape's alternatives. It is never assembled as an argument: the chosen
+// verb is emitted separately by Assemble.
+type SubcommandOption struct {
+	BaseOption
+	Level int
+	Label string
 }
 
 // ---- flags ----
@@ -242,6 +252,26 @@ type PathPositional struct {
 
 func (p *PathPositional) isPositional()                    {}
 func (p *PathPositional) Assemble(state PosState) []string { return assembleValues(state) }
+
+// EnumPositional is a positional restricted to a fixed set of values.
+type EnumPositional struct {
+	PositionalBase `yaml:",inline"`
+	AllowedValues  []string `yaml:"values"`
+}
+
+func (p *EnumPositional) isPositional()                    {}
+func (p *EnumPositional) Allowed() []string                { return p.AllowedValues }
+func (p *EnumPositional) Assemble(state PosState) []string { return assembleValues(state) }
+
+// PassthroughPositional swallows every remaining token verbatim. It is always
+// variadic, so `variadic` is not a valid field on it.
+type PassthroughPositional struct {
+	PositionalBase `yaml:",inline"`
+}
+
+func (p *PassthroughPositional) isPositional()                    {}
+func (p *PassthroughPositional) Variadic() bool                   { return true }
+func (p *PassthroughPositional) Assemble(state PosState) []string { return assembleValues(state) }
 
 func assembleValues(state PosState) []string {
 	var out []string

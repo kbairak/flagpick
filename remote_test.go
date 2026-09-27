@@ -9,11 +9,13 @@ import (
 	"testing"
 )
 
-const testConfigYAML = `options:
-  - name: x
-    kind: flag
-    type: bool
-    long: --x
+const testConfigYAML = `pool:
+  options:
+    - name: x
+      kind: flag
+      type: bool
+      long: --x
+options: [x]
 `
 
 func TestMD5Hex(t *testing.T) {

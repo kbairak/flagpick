@@ -55,7 +55,7 @@ func TestAssembleGolden(t *testing.T) {
 
 	t.Run("order swap", func(t *testing.T) {
 		cfg2, err := parseConfigBytes(t, []byte(
-			"options:\n  - name: A\n    kind: flag\n    type: bool\n    long: --a\n  - name: B\n    kind: flag\n    type: bool\n    long: --b\n",
+			"pool:\n  options:\n    - name: A\n      kind: flag\n      type: bool\n      long: --a\n    - name: B\n      kind: flag\n      type: bool\n      long: --b\noptions: [A, B]\n",
 		))
 		if err != nil {
 			t.Fatalf("parse: %v", err)
@@ -174,7 +174,7 @@ func TestAssembleGolden(t *testing.T) {
 
 func TestRepeatableValueFlag(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(
-		"options:\n  - name: E\n    kind: flag\n    type: string\n    long: --regexp\n    short: -e\n    repeatable: true\n  - name: PATH\n    kind: positional\n    type: string\n    variadic: true\n",
+		"pool:\n  options:\n    - name: E\n      kind: flag\n      type: string\n      long: --regexp\n      short: -e\n      repeatable: true\n    - name: PATH\n      kind: positional\n      type: string\n      variadic: true\noptions: [E, PATH]\n",
 	))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -226,7 +226,7 @@ func TestPrefillModes(t *testing.T) {
 
 func TestEnumAndSizeFlags(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(
-		"options:\n  - name: C\n    kind: flag\n    type: enum\n    long: --color\n    values: [never, auto, always]\n  - name: M\n    kind: flag\n    type: size\n    long: --max-filesize\n  - name: P\n    kind: positional\n    type: string\n",
+		"pool:\n  options:\n    - name: C\n      kind: flag\n      type: enum\n      long: --color\n      values: [never, auto, always]\n    - name: M\n      kind: flag\n      type: size\n      long: --max-filesize\n    - name: P\n      kind: positional\n      type: string\noptions: [C, M, P]\n",
 	))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -406,7 +406,7 @@ func TestPrefill(t *testing.T) {
 
 	t.Run("too many positionals", func(t *testing.T) {
 		cfg2, err := parseConfigBytes(t, []byte(
-			"options:\n  - name: A\n    kind: positional\n    type: string\n  - name: B\n    kind: positional\n    type: string\n",
+			"pool:\n  options:\n    - name: A\n      kind: positional\n      type: string\n    - name: B\n      kind: positional\n      type: string\noptions: [A, B]\n",
 		))
 		if err != nil {
 			t.Fatalf("parse: %v", err)
@@ -447,7 +447,7 @@ func TestMissingRequired(t *testing.T) {
 	}
 
 	cfg2, err := parseConfigBytes(t, []byte(
-		"options:\n  - name: FILES\n    kind: positional\n    type: string\n    required: true\n    variadic: true\n",
+		"pool:\n  options:\n    - name: FILES\n      kind: positional\n      type: string\n      required: true\n      variadic: true\noptions: [FILES]\n",
 	))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -464,7 +464,7 @@ func TestMissingRequired(t *testing.T) {
 
 func TestCountFlag(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(
-		"options:\n  - name: U\n    kind: flag\n    type: count\n    long: --unrestricted\n    short: -u\n",
+		"pool:\n  options:\n    - name: U\n      kind: flag\n      type: count\n      long: --unrestricted\n      short: -u\noptions: [U]\n",
 	))
 	if err != nil {
 		t.Fatalf("parse: %v", err)

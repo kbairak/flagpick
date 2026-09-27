@@ -28,26 +28,32 @@ func NewSession(cfg *CommandConfig) *Session {
 	return s
 }
 
-// Assemble builds the argv tokens deterministically: the mode's flags in
-// session order, then its positionals in schema order.
+// Assemble builds the argv tokens deterministically, depth-first: for each
+// segment, its flags (in session order) then its positionals (in selection
+// order), followed by the chosen child's verb token.
 func Assemble(res Resolved, s *Session) []string {
-	byName := make(map[string]Flag, len(res.Flags))
-	for _, f := range res.Flags {
-		byName[f.OptName()] = f
-	}
-	var out []string = []string{}
-	for _, name := range s.Order {
-		if !res.HasFlag(name) {
-			continue
+	out := []string{}
+	for _, seg := range res.Segments {
+		byName := make(map[string]Flag, len(seg.Flags))
+		for _, f := range seg.Flags {
+			byName[f.OptName()] = f
 		}
-		f, ok := byName[name]
-		if !ok {
-			continue
+		for _, name := range s.Order {
+			if !seg.flagSet[name] {
+				continue
+			}
+			f, ok := byName[name]
+			if !ok {
+				continue
+			}
+			out = append(out, f.Assemble(s.Flags[name])...)
 		}
-		out = append(out, f.Assemble(s.Flags[name])...)
-	}
-	for _, p := range res.Positionals {
-		out = append(out, p.Assemble(PosState{Values: s.PosVals[p.OptName()]})...)
+		for _, p := range seg.Positionals {
+			out = append(out, p.Assemble(PosState{Values: s.PosVals[p.OptName()]})...)
+		}
+		if seg.Sub != nil {
+			out = append(out, seg.Sub.Name)
+		}
 	}
 	return out
 }
@@ -115,12 +121,17 @@ func ToggleFlag(cfg *CommandConfig, s *Session, name string) {
 	}
 }
 
-// Prefill applies tool tokens to a fresh session. It tries each mode in order
-// and returns the first that parses; a token matching no mode is an error.
+// Prefill applies tool tokens to a fresh session. It tries each selectable
+// path in order and returns the first that parses; no match is an error.
 func Prefill(cfg *CommandConfig, tokens []string) (*Session, error) {
+	// No tokens cannot fail: open on the first selectable path so the TUI can
+	// present the tree (e.g. a dispatcher like `direnv` with nothing chosen).
+	if len(tokens) == 0 {
+		return NewSession(cfg), nil
+	}
 	var firstErr error
 	for _, res := range cfg.Resolved() {
-		s, err := prefillWith(cfg, res, tokens)
+		s, err := prefillPath(cfg, res, tokens)
 		if err == nil {
 			return s, nil
 		}
@@ -134,101 +145,157 @@ func Prefill(cfg *CommandConfig, tokens []string) (*Session, error) {
 	return nil, firstErr
 }
 
-func prefillWith(cfg *CommandConfig, res Resolved, tokens []string) (*Session, error) {
-	s := NewSession(cfg)
-	byLong := map[string]Flag{}
-	byShort := map[string]Flag{}
-	byNeg := map[string]Flag{}
-	byNegShort := map[string]Flag{}
-	for _, f := range res.Flags {
-		byLong[f.Long()] = f
+// flagIndex maps the accepted spellings of one segment's flags to the flags.
+type flagIndex struct {
+	byLong     map[string]Flag
+	byShort    map[string]Flag
+	byNeg      map[string]Flag
+	byNegShort map[string]Flag
+}
+
+func newFlagIndex(flags []Flag) flagIndex {
+	idx := flagIndex{
+		byLong:     map[string]Flag{},
+		byShort:    map[string]Flag{},
+		byNeg:      map[string]Flag{},
+		byNegShort: map[string]Flag{},
+	}
+	for _, f := range flags {
+		idx.byLong[f.Long()] = f
 		if f.Short() != "" {
-			byShort[f.Short()] = f
+			idx.byShort[f.Short()] = f
 		}
 		if neg := f.Negative(); neg != "" {
-			byNeg[neg] = f
+			idx.byNeg[neg] = f
 		}
 		if negShort := f.NegativeShort(); negShort != "" {
-			byNegShort[negShort] = f
+			idx.byNegShort[negShort] = f
 		}
 	}
-	posIdx := 0
-	for i := 0; i < len(tokens); i++ {
-		tok := tokens[i]
-		if f, ok := byLong[tok]; ok {
-			if f.TakesValue() {
-				i++
-				if i >= len(tokens) {
-					return nil, fmt.Errorf("missing value for %s", f.Long())
-				}
-				if err := setFlagValue(s, f, tokens[i]); err != nil {
-					return nil, err
-				}
-				continue
+	return idx
+}
+
+// matchFlag tries to consume tok (and the following token for value flags) as
+// one of idx's flags. It returns the number of tokens consumed (0 = no match).
+func matchFlag(cfg *CommandConfig, idx flagIndex, tok, next string, hasNext bool, s *Session) (int, error) {
+	if f, ok := idx.byLong[tok]; ok {
+		if f.TakesValue() {
+			if !hasNext {
+				return 0, fmt.Errorf("missing value for %s", f.Long())
 			}
-			applyPrefillFlag(cfg, s, f)
-			continue
-		}
-		if f, ok := byNeg[tok]; ok {
-			state := s.Flags[f.OptName()]
-			state.Checked = false
-			state.Neg = true
-			s.Flags[f.OptName()] = state
-			continue
-		}
-		if f, ok := byNegShort[tok]; ok {
-			state := s.Flags[f.OptName()]
-			state.Checked = false
-			state.Neg = true
-			s.Flags[f.OptName()] = state
-			continue
-		}
-		if f, ok := byShort[tok]; ok {
-			if f.TakesValue() {
-				i++
-				if i >= len(tokens) {
-					return nil, fmt.Errorf("missing value for %s", f.Short())
-				}
-				if err := setFlagValue(s, f, tokens[i]); err != nil {
-					return nil, err
-				}
-				continue
+			if err := setFlagValue(s, f, next); err != nil {
+				return 0, err
 			}
-			applyPrefillFlag(cfg, s, f)
-			continue
+			return 2, nil
 		}
-		// -uu / -uuu: repeated count short form.
-		if f, n, ok := matchCountShort(tok, byShort); ok {
-			state := s.Flags[f.OptName()]
-			state.Count += n
-			s.Flags[f.OptName()] = state
-			continue
-		}
-		// --long=value
-		if name, val, ok := strings.Cut(tok, "="); ok {
-			if f, ok := byLong[name]; ok && f.TakesValue() {
-				if err := setFlagValue(s, f, val); err != nil {
-					return nil, err
-				}
-				continue
+		applyPrefillFlag(cfg, s, f)
+		return 1, nil
+	}
+	if f, ok := idx.byNeg[tok]; ok {
+		state := s.Flags[f.OptName()]
+		state.Checked = false
+		state.Neg = true
+		s.Flags[f.OptName()] = state
+		return 1, nil
+	}
+	if f, ok := idx.byNegShort[tok]; ok {
+		state := s.Flags[f.OptName()]
+		state.Checked = false
+		state.Neg = true
+		s.Flags[f.OptName()] = state
+		return 1, nil
+	}
+	if f, ok := idx.byShort[tok]; ok {
+		if f.TakesValue() {
+			if !hasNext {
+				return 0, fmt.Errorf("missing value for %s", f.Short())
 			}
+			if err := setFlagValue(s, f, next); err != nil {
+				return 0, err
+			}
+			return 2, nil
 		}
-		// -rVALUE or -r=VALUE
-		if f, ok := matchShortPrefix(tok, byShort); ok {
-			val := strings.TrimPrefix(tok, f.Short())
-			val = strings.TrimPrefix(val, "=")
+		applyPrefillFlag(cfg, s, f)
+		return 1, nil
+	}
+	// -uu / -uuu: repeated count short form.
+	if f, n, ok := matchCountShort(tok, idx.byShort); ok {
+		state := s.Flags[f.OptName()]
+		state.Count += n
+		s.Flags[f.OptName()] = state
+		return 1, nil
+	}
+	// --long=value
+	if name, val, ok := strings.Cut(tok, "="); ok {
+		if f, ok := idx.byLong[name]; ok && f.TakesValue() {
 			if err := setFlagValue(s, f, val); err != nil {
-				return nil, err
+				return 0, err
 			}
+			return 1, nil
+		}
+	}
+	// -rVALUE or -r=VALUE
+	if f, ok := matchShortPrefix(tok, idx.byShort); ok {
+		val := strings.TrimPrefix(tok, f.Short())
+		val = strings.TrimPrefix(val, "=")
+		if err := setFlagValue(s, f, val); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func prefillPath(cfg *CommandConfig, res Resolved, tokens []string) (*Session, error) {
+	if len(res.Segments) == 0 {
+		return nil, fmt.Errorf("empty path")
+	}
+	s := NewSession(cfg)
+	si := 0
+	posIdx := 0
+	passName := ""
+	idx := newFlagIndex(res.Segments[si].Flags)
+	for i := 0; i < len(tokens); i++ {
+		seg := res.Segments[si]
+		tok := tokens[i]
+		if passName != "" {
+			s.PosVals[passName] = append(s.PosVals[passName], tok)
+			continue
+		}
+		next := ""
+		if i+1 < len(tokens) {
+			next = tokens[i+1]
+		}
+		n, err := matchFlag(cfg, idx, tok, next, i+1 < len(tokens), s)
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			i += n - 1
 			continue
 		}
 		if strings.HasPrefix(tok, "-") {
 			return nil, fmt.Errorf("unrecognized argument: %s", tok)
 		}
-		if posIdx >= len(res.Positionals) {
+		if seg.Sub != nil {
+			if !verbMatch(seg.Sub, tok) {
+				return nil, fmt.Errorf("unrecognized argument: %s", tok)
+			}
+			si++
+			posIdx = 0
+			idx = newFlagIndex(res.Segments[si].Flags)
+			continue
+		}
+		if posIdx >= len(seg.Positionals) {
 			return nil, fmt.Errorf("too many positional arguments")
 		}
-		p := res.Positionals[posIdx]
+		p := seg.Positionals[posIdx]
+		if err := validatePositionalValue(p, tok); err != nil {
+			return nil, err
+		}
+		if _, ok := p.(*PassthroughPositional); ok {
+			passName = p.OptName()
+		}
 		if p.Variadic() {
 			s.PosVals[p.OptName()] = append(s.PosVals[p.OptName()], tok)
 			continue
@@ -236,7 +303,36 @@ func prefillWith(cfg *CommandConfig, res Resolved, tokens []string) (*Session, e
 		s.PosVals[p.OptName()] = []string{tok}
 		posIdx++
 	}
+	if si != len(res.Segments)-1 {
+		return nil, fmt.Errorf("missing subcommand")
+	}
 	return s, nil
+}
+
+// validatePositionalValue enforces kind-specific positional value rules.
+func validatePositionalValue(p Positional, value string) error {
+	e, ok := p.(*EnumPositional)
+	if !ok {
+		return nil
+	}
+	for _, a := range e.Allowed() {
+		if a == value {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid value for %s: %q (want one of %s)", p.OptName(), value, strings.Join(e.Allowed(), ", "))
+}
+
+func verbMatch(sub *RNode, tok string) bool {
+	if tok == sub.Name {
+		return true
+	}
+	for _, a := range sub.Aliases {
+		if a == tok {
+			return true
+		}
+	}
+	return false
 }
 
 // matchCountShort recognizes repeated count short forms like -uu for short
