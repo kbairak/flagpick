@@ -114,6 +114,29 @@ func TestAssembleGolden(t *testing.T) {
 		if got := Assemble(res1(cfg), s); !reflect.DeepEqual(got, []string{"--no-line-number"}) {
 			t.Fatalf("off: %v", got)
 		}
+		s, err = Prefill(cfg, []string{"-N"})
+		if err != nil {
+			t.Fatalf("prefill neg short: %v", err)
+		}
+		if s.Flags["Line numbers"].Checked || !s.Flags["Line numbers"].Neg {
+			t.Fatalf("neg short state = %+v", s.Flags["Line numbers"])
+		}
+		if got := Assemble(res1(cfg), s); !reflect.DeepEqual(got, []string{"--no-line-number"}) {
+			t.Fatalf("neg short: %v", got)
+		}
+	})
+
+	t.Run("negative short", func(t *testing.T) {
+		s, err := Prefill(cfg, []string{"-I"})
+		if err != nil {
+			t.Fatalf("prefill: %v", err)
+		}
+		if s.Flags["With filename"].Checked || !s.Flags["With filename"].Neg {
+			t.Fatalf("state = %+v", s.Flags["With filename"])
+		}
+		if got := Assemble(res1(cfg), s); !reflect.DeepEqual(got, []string{"--no-filename"}) {
+			t.Fatalf("got %v, want [--no-filename]", got)
+		}
 	})
 
 	t.Run("string value flag", func(t *testing.T) {

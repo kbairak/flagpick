@@ -67,6 +67,7 @@ type Flag interface {
 	Long() string
 	Short() string
 	Negative() string
+	NegativeShort() string
 	Repeatable() bool
 	Conflicts() []string
 	Requires() []string
@@ -78,21 +79,23 @@ type Flag interface {
 }
 
 type FlagBase struct {
-	BaseOption   `yaml:",inline"`
-	LongForm     string   `yaml:"long"`
-	ShortForm    string   `yaml:"short"`
-	NegativeForm string   `yaml:"negative"`
-	IsRepeatable bool     `yaml:"repeatable"`
-	ConflictList []string `yaml:"conflicts"`
-	RequireList  []string `yaml:"requires"`
+	BaseOption        `yaml:",inline"`
+	LongForm          string   `yaml:"long"`
+	ShortForm         string   `yaml:"short"`
+	NegativeForm      string   `yaml:"negative"`
+	NegativeShortForm string   `yaml:"negative_short"`
+	IsRepeatable      bool     `yaml:"repeatable"`
+	ConflictList      []string `yaml:"conflicts"`
+	RequireList       []string `yaml:"requires"`
 }
 
-func (f *FlagBase) Long() string        { return f.LongForm }
-func (f *FlagBase) Short() string       { return f.ShortForm }
-func (f *FlagBase) Negative() string    { return f.NegativeForm }
-func (f *FlagBase) Repeatable() bool    { return f.IsRepeatable }
-func (f *FlagBase) Conflicts() []string { return f.ConflictList }
-func (f *FlagBase) Requires() []string  { return f.RequireList }
+func (f *FlagBase) Long() string          { return f.LongForm }
+func (f *FlagBase) Short() string         { return f.ShortForm }
+func (f *FlagBase) Negative() string      { return f.NegativeForm }
+func (f *FlagBase) NegativeShort() string { return f.NegativeShortForm }
+func (f *FlagBase) Repeatable() bool      { return f.IsRepeatable }
+func (f *FlagBase) Conflicts() []string   { return f.ConflictList }
+func (f *FlagBase) Requires() []string    { return f.RequireList }
 
 type BoolFlag struct {
 	FlagBase `yaml:",inline"`

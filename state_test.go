@@ -6,7 +6,7 @@ import (
 )
 
 func TestStateRoundTrip(t *testing.T) {
-	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
 
 	want := []string{"--ignore-case", "foo"}
 	if err := saveLast("rg", want); err != nil {
@@ -32,10 +32,10 @@ func TestStateRoundTrip(t *testing.T) {
 }
 
 func TestStateMissing(t *testing.T) {
-	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
 
 	if _, ok := loadLast(); ok {
-		t.Fatal("loadLast on empty cache returned true")
+		t.Fatal("loadLast on empty state returned true")
 	}
 	if got := prefillTokens("rg", []string{"keep"}, true); !reflect.DeepEqual(got, []string{"keep"}) {
 		t.Errorf("resume with no state: got %v, want [keep]", got)

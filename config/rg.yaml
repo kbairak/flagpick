@@ -4,6 +4,7 @@ groups:
   input:
     - Pattern file
     - Pre command
+    - No pre
     - Pre glob
     - Search zip
   search:
@@ -11,6 +12,7 @@ groups:
     - CRLF
     - DFA size limit
     - Encoding
+    - No encoding
     - Engine
     - Fixed strings
     - Ignore case
@@ -66,6 +68,7 @@ groups:
     - Column
     - Context
     - Context separator
+    - No context separator
     - Field context separator
     - Field match separator
     - Heading
@@ -162,6 +165,13 @@ options:
     short: ""
     description: >
       Search the standard output of COMMAND for each input path.
+  - name: No pre
+    kind: flag
+    type: bool
+    long: --no-pre
+    short: ""
+    description: >
+      Disable the --pre command.
   - name: Pre glob
     kind: flag
     type: string
@@ -208,6 +218,13 @@ options:
     short: "-E"
     description: >
       Specify the text encoding of files to search.
+  - name: No encoding
+    kind: flag
+    type: bool
+    long: --no-encoding
+    short: ""
+    description: >
+      Disable the --encoding flag.
   - name: Engine
     kind: flag
     type: enum
@@ -623,6 +640,13 @@ options:
     short: ""
     description: >
       Separator for contextual chunks.
+  - name: No context separator
+    kind: flag
+    type: bool
+    long: --no-context-separator
+    short: ""
+    description: >
+      Disable the --context-separator flag.
   - name: Field context separator
     kind: flag
     type: string
@@ -681,6 +705,7 @@ options:
     long: --line-number
     short: "-n"
     negative: --no-line-number
+    negative_short: "-N"
     description: >
       Show line numbers.
   - name: Max columns
@@ -784,6 +809,7 @@ options:
     long: --with-filename
     short: "-H"
     negative: --no-filename
+    negative_short: "-I"
     description: >
       Print the file path with each matching line.
   - name: Sort files

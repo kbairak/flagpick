@@ -88,7 +88,7 @@ func decodeFlag(node *yaml.Node) (Flag, error) {
 	switch head.Type {
 	case KindBool:
 		f = &BoolFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "negative", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "negative", "negative_short", "repeatable", "conflicts", "requires")
 	case KindString:
 		f = &StringFlag{}
 		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires")
@@ -162,47 +162,62 @@ func fieldSet(names ...string) map[string]bool {
 	return m
 }
 
-// dirs returns the override directory (config) and the cache directory,
-// both suffixed with "flagpick". Honors $XDG_CONFIG_HOME / $XDG_CACHE_HOME,
-// falling back to ~/.config / ~/.cache (NOTES.md).
-func dirs() (override, cache string, err error) {
+// xdgDir resolves a per-app directory from an XDG env var. When the variable
+// is unset it falls back to <home>/fallback. The result is <base>/flagpick.
+func xdgDir(env, fallback string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	cfgBase := os.Getenv("XDG_CONFIG_HOME")
-	if cfgBase == "" {
-		cfgBase = filepath.Join(home, ".config")
+	base := os.Getenv(env)
+	if base == "" {
+		base = filepath.Join(home, filepath.FromSlash(fallback))
 	}
-	cacheBase := os.Getenv("XDG_CACHE_HOME")
-	if cacheBase == "" {
-		cacheBase = filepath.Join(home, ".cache")
+	return filepath.Join(base, "flagpick"), nil
+}
+
+// configDir holds user override configs.
+func configDir() (string, error) { return xdgDir("XDG_CONFIG_HOME", ".config") }
+
+// dataDir holds downloaded copies of upstream configs.
+func dataDir() (string, error) { return xdgDir("XDG_DATA_HOME", ".local/share") }
+
+// stateDir holds run state such as the last composition for --resume.
+func stateDir() (string, error) { return xdgDir("XDG_STATE_HOME", ".local/state") }
+
+// findConfig returns <name>.yaml, scanning the config directory (user
+// overrides) first and then the data directory (downloads). The bool reports
+// whether a file was found.
+func findConfig(configDir, dataDir, name string) (string, bool) {
+	for _, dir := range []string{configDir, dataDir} {
+		p := filepath.Join(dir, name+".yaml")
+		if _, err := os.Stat(p); err == nil {
+			return p, true
+		}
 	}
-	return filepath.Join(cfgBase, "flagpick"), filepath.Join(cacheBase, "flagpick"), nil
+	return "", false
 }
 
 // ConfigNotFoundError signals that no config file exists for a command.
 type ConfigNotFoundError struct{ Name string }
 
 func (e *ConfigNotFoundError) Error() string {
-	return fmt.Sprintf("no config for '%s'; add '%s.yaml' under $XDG_CACHE_HOME/flagpick/", e.Name, e.Name)
+	return fmt.Sprintf("no config for '%s'; run 'fp --update'", e.Name)
 }
 
-// LoadConfig resolves <override>/<name>.yaml then <cache>/<name>.yaml.
+// LoadConfig resolves <config>/<name>.yaml (user override) then
+// <data>/<name>.yaml (downloaded).
 func LoadConfig(name string) (*CommandConfig, error) {
-	override, cache, err := dirs()
+	config, err := configDir()
 	if err != nil {
 		return nil, err
 	}
-	var path string
-	for _, dir := range []string{override, cache} {
-		p := filepath.Join(dir, name+".yaml")
-		if _, statErr := os.Stat(p); statErr == nil {
-			path = p
-			break
-		}
+	data, err := dataDir()
+	if err != nil {
+		return nil, err
 	}
-	if path == "" {
+	path, ok := findConfig(config, data, name)
+	if !ok {
 		return nil, &ConfigNotFoundError{Name: name}
 	}
 	b, err := os.ReadFile(path)
@@ -229,6 +244,7 @@ func LoadConfig(name string) (*CommandConfig, error) {
 func validateConfig(cfg *CommandConfig) error {
 	seen := map[string]bool{}
 	seenNeg := map[string]bool{}
+	seenNegShort := map[string]bool{}
 	for _, f := range cfg.Flags {
 		if f.OptName() == "" {
 			return fmt.Errorf("flag is missing a name")
@@ -253,6 +269,21 @@ func validateConfig(cfg *CommandConfig) error {
 				return fmt.Errorf("duplicate negative form %q", neg)
 			}
 			seenNeg[neg] = true
+		}
+		if negShort := f.NegativeShort(); negShort != "" {
+			if !strings.HasPrefix(negShort, "-") || strings.HasPrefix(negShort, "--") {
+				return fmt.Errorf("flag %q: negative short must start with a single -", f.OptName())
+			}
+			if negShort == f.Short() {
+				return fmt.Errorf("flag %q: negative short must differ from short", f.OptName())
+			}
+			if f.Negative() == "" {
+				return fmt.Errorf("flag %q: negative short requires a negative form", f.OptName())
+			}
+			if seenNegShort[negShort] {
+				return fmt.Errorf("duplicate negative short form %q", negShort)
+			}
+			seenNegShort[negShort] = true
 		}
 		seen[f.OptName()] = true
 	}
@@ -279,15 +310,19 @@ func validateConfig(cfg *CommandConfig) error {
 	return nil
 }
 
-// ListCommands returns the sorted basenames of *.yaml configs, with
-// override-dir entries winning over cache-dir entries.
+// ListCommands returns the sorted basenames of *.yaml configs, scanning the
+// config directory (user overrides) first and then the data directory.
 func ListCommands() ([]string, error) {
-	override, cache, err := dirs()
+	config, err := configDir()
+	if err != nil {
+		return nil, err
+	}
+	data, err := dataDir()
 	if err != nil {
 		return nil, err
 	}
 	seen := map[string]bool{}
-	for _, dir := range []string{cache, override} {
+	for _, dir := range []string{config, data} {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			if os.IsNotExist(err) {

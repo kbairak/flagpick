@@ -139,6 +139,7 @@ func prefillWith(cfg *CommandConfig, res Resolved, tokens []string) (*Session, e
 	byLong := map[string]Flag{}
 	byShort := map[string]Flag{}
 	byNeg := map[string]Flag{}
+	byNegShort := map[string]Flag{}
 	for _, f := range res.Flags {
 		byLong[f.Long()] = f
 		if f.Short() != "" {
@@ -146,6 +147,9 @@ func prefillWith(cfg *CommandConfig, res Resolved, tokens []string) (*Session, e
 		}
 		if neg := f.Negative(); neg != "" {
 			byNeg[neg] = f
+		}
+		if negShort := f.NegativeShort(); negShort != "" {
+			byNegShort[negShort] = f
 		}
 	}
 	posIdx := 0
@@ -166,6 +170,13 @@ func prefillWith(cfg *CommandConfig, res Resolved, tokens []string) (*Session, e
 			continue
 		}
 		if f, ok := byNeg[tok]; ok {
+			state := s.Flags[f.OptName()]
+			state.Checked = false
+			state.Neg = true
+			s.Flags[f.OptName()] = state
+			continue
+		}
+		if f, ok := byNegShort[tok]; ok {
 			state := s.Flags[f.OptName()]
 			state.Checked = false
 			state.Neg = true

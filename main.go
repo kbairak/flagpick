@@ -24,6 +24,7 @@ flags:
   -V, --version   print version
   -h, --help      print this help
   -r, --resume    prefill with the last composition for <command>
+  --update        download the latest upstream configs
 `)
 }
 
@@ -53,6 +54,17 @@ func main() {
 			return
 		case "--resume", "-r":
 			resume = true
+		case "--update":
+			data, err := dataDir()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			if err := updateConfigs(remoteBaseURL, data); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			return
 		default:
 			if strings.HasPrefix(a, "-") {
 				fmt.Fprintf(os.Stderr, "unknown flag: %s\n", a)

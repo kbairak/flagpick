@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -41,8 +43,8 @@ func TestParseRealConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if len(cfg.Flags) != 102 {
-		t.Fatalf("flags = %d, want 102", len(cfg.Flags))
+	if len(cfg.Flags) != 105 {
+		t.Fatalf("flags = %d, want 105", len(cfg.Flags))
 	}
 	modes := cfg.Resolved()
 	if len(modes) != 4 {
@@ -198,6 +200,21 @@ func TestInvalidConfigs(t *testing.T) {
 			yaml:    "options:\n  - name: X\n    kind: positional\n    type: string\n    variadic: true\n  - name: Y\n    kind: positional\n    type: string\n    variadic: true\n",
 			wantSub: "only one variadic",
 		},
+		{
+			name:    "negative short without negative",
+			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    negative_short: \"-y\"\n",
+			wantSub: "requires a negative form",
+		},
+		{
+			name:    "negative short double dash",
+			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    negative: --no-x\n    negative_short: \"--y\"\n",
+			wantSub: "negative short must start with a single -",
+		},
+		{
+			name:    "negative short equals short",
+			yaml:    "options:\n  - name: x\n    kind: flag\n    type: bool\n    long: --x\n    short: \"-x\"\n    negative: --no-x\n    negative_short: \"-x\"\n",
+			wantSub: "negative short must differ from short",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -219,5 +236,107 @@ func TestConfigNotFound(t *testing.T) {
 	}
 	if _, ok := err.(*ConfigNotFoundError); !ok {
 		t.Fatalf("error type = %T, want *ConfigNotFoundError", err)
+	}
+}
+
+func minimalConfig(flagName string) []byte {
+	return []byte("options:\n  - name: " + flagName + "\n    kind: flag\n    type: bool\n    long: --x\n")
+}
+
+func TestFindConfig(t *testing.T) {
+	data := t.TempDir()
+	configDir := t.TempDir()
+
+	// Config (user override) wins when both define the command.
+	if err := os.WriteFile(filepath.Join(data, "rg.yaml"), []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "rg.yaml"), []byte("config"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	path, ok := findConfig(configDir, data, "rg")
+	if !ok {
+		t.Fatal("findConfig returned false")
+	}
+	if path != filepath.Join(configDir, "rg.yaml") {
+		t.Fatalf("path = %q, want config path", path)
+	}
+
+	// Miss.
+	if _, ok := findConfig(configDir, data, "nope"); ok {
+		t.Fatal("findConfig found a nonexistent command")
+	}
+}
+
+func TestLoadConfigPrecedence(t *testing.T) {
+	dataHome := t.TempDir()
+	configHome := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", dataHome)
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	dataDir := filepath.Join(dataHome, "flagpick")
+	configDir := filepath.Join(configHome, "flagpick")
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Data version and config version differ; config (override) must win.
+	if err := os.WriteFile(filepath.Join(dataDir, "rg.yaml"), minimalConfig("from-data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "rg.yaml"), minimalConfig("from-config"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadConfig("rg")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if len(cfg.Flags) != 1 || cfg.Flags[0].OptName() != "from-config" {
+		t.Fatalf("LoadConfig picked %v, want config version", cfg.Flags)
+	}
+
+	// A command present only in the data dir is found.
+	if err := os.WriteFile(filepath.Join(dataDir, "solo.yaml"), minimalConfig("solo"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = LoadConfig("solo")
+	if err != nil {
+		t.Fatalf("LoadConfig(solo): %v", err)
+	}
+	if len(cfg.Flags) != 1 || cfg.Flags[0].OptName() != "solo" {
+		t.Fatalf("LoadConfig(solo) picked %v", cfg.Flags)
+	}
+}
+
+func TestManifestUpToDate(t *testing.T) {
+	b, err := os.ReadFile("config/manifest.json")
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	var manifest map[string]string
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		t.Fatalf("parse manifest: %v", err)
+	}
+	files, err := filepath.Glob("config/*.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		name := strings.TrimSuffix(filepath.Base(f), ".yaml")
+		data, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, ok := manifest[name]
+		if !ok {
+			t.Errorf("config %s missing from manifest; run 'make manifest'", name)
+			continue
+		}
+		if got := md5Hex(data); got != want {
+			t.Errorf("manifest stale for %s: manifest %s, computed %s; run 'make manifest'", name, want, got)
+		}
 	}
 }

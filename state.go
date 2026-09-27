@@ -14,11 +14,11 @@ type lastCommand struct {
 }
 
 func statePath() (string, error) {
-	_, cache, err := dirs()
+	dir, err := stateDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(cache, "last.json"), nil
+	return filepath.Join(dir, "last.json"), nil
 }
 
 // loadLast reads the saved composition. It returns false when no usable state
