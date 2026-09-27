@@ -2,6 +2,8 @@
 
 A TUI for building and running complex CLI commands.
 
+<img width="1266" height="688" alt="image" src="https://github.com/user-attachments/assets/4b2dfaa9-11cc-4c53-83f1-2c6729526db5" />
+
 You point `flagpick` at a command — `rg`, `direnv`, … — and it shows that
 command's flags and positional arguments as a list. You pick and edit them
 fuzzy-style, watch the assembled command preview update live, and then run it,
