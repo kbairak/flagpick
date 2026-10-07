@@ -1,3 +1,5 @@
+// Package main implements genmanifest, which writes config/manifest.json from
+// the MD5 hashes of the config files.
 package main
 
 import (
@@ -7,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -38,17 +39,9 @@ func main() {
 		manifest[name] = hex.EncodeToString(sum[:])
 	}
 
-	keys := make([]string, 0, len(manifest))
-	for k := range manifest {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	ordered := make(map[string]string, len(manifest))
-	for _, k := range keys {
-		ordered[k] = manifest[k]
-	}
-
-	b, err := json.MarshalIndent(ordered, "", "  ")
+	// json.MarshalIndent emits map keys in sorted order, so the manifest is
+	// deterministic without an explicit ordering pass.
+	b, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -33,7 +33,7 @@ func httpGet(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
 	}
@@ -204,7 +204,7 @@ func updateConfigs(base, dataDir string) error {
 		p := filepath.Join(dataDir, name+".yaml")
 		if err := writeFileAtomic(p, downloaded[name]); err != nil {
 			for _, w := range written {
-				os.Remove(filepath.Join(dataDir, w+".yaml.tmp"))
+				_ = os.Remove(filepath.Join(dataDir, w+".yaml.tmp"))
 			}
 			return err
 		}

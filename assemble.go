@@ -95,14 +95,8 @@ func isShellSafe(s string) bool {
 // ToggleFlag flips a flag's checked state and, when it became checked,
 // auto-unchecks every currently-checked flag in its own Conflicts() list.
 func ToggleFlag(cfg *CommandConfig, s *Session, name string) {
-	var f Flag
-	for _, cand := range cfg.Flags {
-		if cand.OptName() == name {
-			f = cand
-			break
-		}
-	}
-	if f == nil {
+	f, ok := cfg.flag(name)
+	if !ok {
 		return
 	}
 	switch f.(type) {

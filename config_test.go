@@ -209,9 +209,9 @@ func TestSubcommandMenuShowsDescriptions(t *testing.T) {
 	}
 
 	// Choosing a flag-less subcommand must stick: validate and assemble it.
-	for i, pi := range m.subPaths {
+	for i, pi := range m.sub.paths {
 		if m.modes[pi].Name == "help" {
-			m.subSel = i
+			m.sub.sel = i
 		}
 	}
 	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
@@ -251,9 +251,9 @@ func TestRequiredSubcommandArgBlocksRun(t *testing.T) {
 		}
 	}
 	m.openSub(sub.Level)
-	for i, pi := range m.subPaths {
+	for i, pi := range m.sub.paths {
 		if m.modes[pi].Name == "hook" {
-			m.subSel = i
+			m.sub.sel = i
 		}
 	}
 	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
@@ -272,6 +272,33 @@ func TestRequiredSubcommandArgBlocksRun(t *testing.T) {
 	}
 	if m.res().Name != "hook" {
 		t.Fatalf("path changed to %q; must stay hook", m.res().Name)
+	}
+}
+
+func TestParseGitConfig(t *testing.T) {
+	b, err := os.ReadFile("config/git.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	cfg, err := parseConfigBytes(t, b)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	byName := map[string]Resolved{}
+	for _, r := range cfg.Resolved() {
+		byName[r.Name] = r
+	}
+	for _, want := range []string{"add", "commit", "rebase", "remote add", "remote set-url", "stash pop", "config set"} {
+		if _, ok := byName[want]; !ok {
+			t.Errorf("missing path %q", want)
+		}
+	}
+	// Global flags live on the root, so a subcommand path sees them.
+	if r, ok := byName["commit"]; !ok || !r.HasFlag("Help") || !r.HasFlag("Git dir") {
+		t.Fatalf("commit path missing inherited global flags")
+	}
+	if r := byName["remote add"]; !r.HasPositional("Remote name") {
+		t.Fatalf("remote add missing positional")
 	}
 }
 

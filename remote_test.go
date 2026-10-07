@@ -93,10 +93,10 @@ func newUpdateServer(t *testing.T, body string) (*httptest.Server, *int) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/manifest.json":
-			fmt.Fprint(w, manifest)
+			_, _ = fmt.Fprint(w, manifest)
 		case "/rg.yaml":
 			yamlHits++
-			fmt.Fprint(w, body)
+			_, _ = fmt.Fprint(w, body)
 		default:
 			http.NotFound(w, r)
 		}
@@ -146,7 +146,7 @@ func TestUpdateConfigsDownloadFailureWritesNothing(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/manifest.json":
-			fmt.Fprint(w, `{"rg": "900150983cd24fb0d6963f7d28e17f72"}`)
+			_, _ = fmt.Fprint(w, `{"rg": "900150983cd24fb0d6963f7d28e17f72"}`)
 		case "/rg.yaml":
 			http.Error(w, "boom", http.StatusInternalServerError)
 		default:

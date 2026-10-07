@@ -1,0 +1,1013 @@
+description: The stupid content tracker.
+
+pool:
+  options:
+    # -- global options (must precede the subcommand) --
+    - {name: Git dir,        kind: flag, type: string, long: --git-dir}
+    - {name: Work tree,      kind: flag, type: string, long: --work-tree}
+    - {name: Namespace,      kind: flag, type: string, long: --namespace}
+    - {name: Config env,     kind: flag, type: string, long: --config-env, repeatable: true}
+    - {name: Exec path,      kind: flag, type: string, long: --exec-path}
+    - {name: Bare,           kind: flag, type: bool, long: --bare}
+    - {name: Paginate,       kind: flag, type: bool, long: --paginate, short: "-p", negative: --no-pager, negative_short: "-P"}
+    - {name: No replace objects, kind: flag, type: bool, long: --no-replace-objects}
+    - {name: No lazy fetch,  kind: flag, type: bool, long: --no-lazy-fetch}
+    - {name: No optional locks, kind: flag, type: bool, long: --no-optional-locks}
+    - {name: No advice,      kind: flag, type: bool, long: --no-advice}
+    - {name: Html path,      kind: flag, type: bool, long: --html-path}
+    - {name: Man path,       kind: flag, type: bool, long: --man-path}
+    - {name: Info path,      kind: flag, type: bool, long: --info-path}
+    - {name: Version,        kind: flag, type: bool, long: --version, short: "-v"}
+    - {name: Help,           kind: flag, type: bool, long: --help, short: "-h"}
+
+    # -- options shared by many subcommands (inherited, not on root) --
+    - {name: Quiet,     kind: flag, type: bool, long: --quiet, short: "-q"}
+    - {name: Verbose,   kind: flag, type: bool, long: --verbose, short: "-v"}
+    - {name: Force,     kind: flag, type: bool, long: --force, short: "-f"}
+    - {name: Dry run,   kind: flag, type: bool, long: --dry-run, short: "-n"}
+    - {name: Patch,     kind: flag, type: bool, long: --patch, short: "-p"}
+    - {name: Progress,  kind: flag, type: bool, long: --progress}
+    - {name: Recurse submodules, kind: flag, type: bool, long: --recurse-submodules}
+    - {name: Set upstream, kind: flag, type: bool, long: --set-upstream, short: "-u"}
+    - {name: Tags,      kind: flag, type: bool, long: --tags, short: "-t"}
+    - {name: Prune,     kind: flag, type: bool, long: --prune, short: "-p"}
+    - {name: All,       kind: flag, type: bool, long: --all, short: "-a"}
+    - {name: Color,     kind: flag, type: enum, long: --color, values: [always, auto, never]}
+    - {name: Ignore case, kind: flag, type: bool, long: --ignore-case, short: "-i"}
+    - {name: Abbrev,    kind: flag, type: int, long: --abbrev}
+    - {name: Max count, kind: flag, type: int, long: --max-count, short: "-n"}
+    - {name: Stat,      kind: flag, type: bool, long: --stat}
+    - {name: Format,    kind: flag, type: string, long: --format}
+    - {name: Trailer,   kind: flag, type: string, long: --trailer, repeatable: true}
+
+    # -- positionals shared by many subcommands --
+    - {name: Pathspec,   kind: positional, type: path,   required: false, variadic: true}
+    - {name: Refspec,    kind: positional, type: string, required: false, variadic: true}
+    - {name: Revision,   kind: positional, type: string, required: false}
+    - {name: Repository, kind: positional, type: string, required: false}
+
+usage: git [<global options>] <command> [<args>]
+
+options:
+  [Git dir, Work tree, Namespace, Config env, Exec path, Bare, Paginate,
+   No replace objects, No lazy fetch, No optional locks, No advice,
+   Html path, Man path, Info path, Version, Help]
+
+subcommands:
+  - name: add
+    description: Add file contents to the index.
+    usage: git add [<options>] [--] <pathspec>...
+    pool:
+      options:
+        - {name: Add interactive, kind: flag, type: bool, long: --interactive, short: "-i"}
+        - {name: Add edit, kind: flag, type: bool, long: --edit, short: "-e"}
+        - {name: Add update, kind: flag, type: bool, long: --update, short: "-u"}
+        - {name: Add renormalize, kind: flag, type: bool, long: --renormalize}
+        - {name: Add intent to add, kind: flag, type: bool, long: --intent-to-add, short: "-N"}
+        - {name: Add ignore removal, kind: flag, type: bool, long: --ignore-removal}
+        - {name: Add refresh, kind: flag, type: bool, long: --refresh}
+        - {name: Add ignore errors, kind: flag, type: bool, long: --ignore-errors}
+        - {name: Add ignore missing, kind: flag, type: bool, long: --ignore-missing}
+        - {name: Add sparse, kind: flag, type: bool, long: --sparse}
+        - {name: Add chmod, kind: flag, type: string, long: --chmod}
+        - {name: Add pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Add pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+    options:
+      [Dry run, Verbose, Add interactive, Patch, Add edit, Force, Add update,
+       Add renormalize, Add intent to add, All, Add ignore removal, Add refresh,
+       Add ignore errors, Add ignore missing, Add sparse, Add chmod,
+       Add pathspec file, Add pathspec nul, Pathspec]
+
+  - name: branch
+    description: List, create, or delete branches.
+    usage: git branch [<options>] <branch-name> [<start-point>]
+    pool:
+      options:
+        - {name: Branch track, kind: flag, type: bool, long: --track, short: "-t"}
+        - {name: Branch set upstream, kind: flag, type: string, long: --set-upstream-to, short: "-u"}
+        - {name: Branch unset upstream, kind: flag, type: bool, long: --unset-upstream}
+        - {name: Branch remotes, kind: flag, type: bool, long: --remotes, short: "-r"}
+        - {name: Branch contains, kind: flag, type: string, long: --contains}
+        - {name: Branch no contains, kind: flag, type: string, long: --no-contains}
+        - {name: Branch delete, kind: flag, type: bool, long: --delete, short: "-d"}
+        - {name: Branch delete force, kind: flag, type: bool, long: --force-delete}
+        - {name: Branch move, kind: flag, type: bool, long: --move, short: "-m"}
+        - {name: Branch copy, kind: flag, type: bool, long: --copy, short: "-c"}
+        - {name: Branch list, kind: flag, type: bool, long: --list, short: "-l"}
+        - {name: Branch show current, kind: flag, type: bool, long: --show-current}
+        - {name: Branch create reflog, kind: flag, type: bool, long: --create-reflog}
+        - {name: Branch edit description, kind: flag, type: bool, long: --edit-description}
+        - {name: Branch merged, kind: flag, type: string, long: --merged}
+        - {name: Branch no merged, kind: flag, type: string, long: --no-merged}
+        - {name: Branch column, kind: flag, type: enum, long: --column, values: [always, auto, never]}
+        - {name: Branch sort, kind: flag, type: string, long: --sort}
+        - {name: Branch points at, kind: flag, type: string, long: --points-at}
+        - {name: Branch name, kind: positional, type: string, required: false}
+        - {name: Branch start point, kind: positional, type: string, required: false}
+    options:
+      [Verbose, Quiet, Branch track, Branch set upstream, Branch unset upstream,
+       Branch remotes, Branch contains, Branch no contains, Branch delete,
+       Branch delete force, Branch move, Branch copy, Branch list,
+       Branch show current, Branch create reflog, Branch edit description,
+       Force, Branch merged, Branch no merged, Branch column, Branch sort,
+       Branch points at, Ignore case, Recurse submodules, Format,
+       Branch name, Branch start point]
+
+  - name: checkout
+    description: Switch branches or restore working tree files.
+    usage: git checkout [<options>] <branch>
+    pool:
+      options:
+        - {name: Checkout guess, kind: flag, type: bool, long: --guess}
+        - {name: Checkout overlay, kind: flag, type: bool, long: --overlay}
+        - {name: Checkout merge, kind: flag, type: bool, long: --merge, short: "-m"}
+        - {name: Checkout conflict, kind: flag, type: enum, long: --conflict, values: [merge, diff3, zdiff3]}
+        - {name: Checkout detach, kind: flag, type: bool, long: --detach, short: "-d"}
+        - {name: Checkout track, kind: flag, type: bool, long: --track, short: "-t"}
+        - {name: Checkout orphan, kind: flag, type: string, long: --orphan}
+        - {name: Checkout overwrite ignore, kind: flag, type: bool, long: --overwrite-ignore}
+        - {name: Checkout ignore other worktrees, kind: flag, type: bool, long: --ignore-other-worktrees}
+        - {name: Checkout ours, kind: flag, type: bool, long: --ours, short: "-2"}
+        - {name: Checkout theirs, kind: flag, type: bool, long: --theirs, short: "-3"}
+        - {name: Checkout pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Checkout pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+        - {name: Checkout branch, kind: positional, type: string, required: false}
+    options:
+      [Quiet, Checkout guess, Checkout overlay, Recurse submodules, Progress,
+       Checkout merge, Checkout conflict, Checkout detach, Checkout track, Force,
+       Checkout orphan, Checkout overwrite ignore, Checkout ignore other worktrees,
+       Checkout ours, Checkout theirs, Patch, Checkout pathspec file,
+       Checkout pathspec nul, Checkout branch, Pathspec]
+
+  - name: switch
+    description: Switch branches.
+    usage: git switch [<options>] [<branch>]
+    pool:
+      options:
+        - {name: Switch create, kind: flag, type: string, long: --create, short: "-c"}
+        - {name: Switch force create, kind: flag, type: string, long: --force-create, short: "-C"}
+        - {name: Switch guess, kind: flag, type: bool, long: --guess}
+        - {name: Switch discard, kind: flag, type: bool, long: --discard-changes}
+        - {name: Switch merge, kind: flag, type: bool, long: --merge, short: "-m"}
+        - {name: Switch conflict, kind: flag, type: enum, long: --conflict, values: [merge, diff3, zdiff3]}
+        - {name: Switch detach, kind: flag, type: bool, long: --detach, short: "-d"}
+        - {name: Switch track, kind: flag, type: bool, long: --track, short: "-t"}
+        - {name: Switch orphan, kind: flag, type: string, long: --orphan}
+        - {name: Switch overwrite ignore, kind: flag, type: bool, long: --overwrite-ignore}
+        - {name: Switch ignore other worktrees, kind: flag, type: bool, long: --ignore-other-worktrees}
+        - {name: Switch branch, kind: positional, type: string, required: false}
+    options:
+      [Switch create, Switch force create, Switch guess, Switch discard, Quiet,
+       Recurse submodules, Progress, Switch merge, Switch conflict, Switch detach,
+       Switch track, Force, Switch orphan, Switch overwrite ignore,
+       Switch ignore other worktrees, Switch branch]
+
+  - name: restore
+    description: Restore working tree files.
+    usage: git restore [<options>] [--source=<branch>] <file>...
+    pool:
+      options:
+        - {name: Restore source, kind: flag, type: string, long: --source, short: "-s"}
+        - {name: Restore staged, kind: flag, type: bool, long: --staged, short: "-S"}
+        - {name: Restore worktree, kind: flag, type: bool, long: --worktree, short: "-W"}
+        - {name: Restore ignore unmerged, kind: flag, type: bool, long: --ignore-unmerged}
+        - {name: Restore overlay, kind: flag, type: bool, long: --overlay}
+        - {name: Restore merge, kind: flag, type: bool, long: --merge, short: "-m"}
+        - {name: Restore conflict, kind: flag, type: enum, long: --conflict, values: [merge, diff3, zdiff3]}
+        - {name: Restore ours, kind: flag, type: bool, long: --ours, short: "-2"}
+        - {name: Restore theirs, kind: flag, type: bool, long: --theirs, short: "-3"}
+        - {name: Restore pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Restore pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+    options:
+      [Restore source, Restore staged, Restore worktree, Restore ignore unmerged,
+       Restore overlay, Quiet, Recurse submodules, Progress, Restore merge,
+       Restore conflict, Restore ours, Restore theirs, Patch,
+       Restore pathspec file, Restore pathspec nul, Pathspec]
+
+  - name: clone
+    description: Clone a repository into a new directory.
+    usage: git clone [<options>] [--] <repo> [<dir>]
+    pool:
+      options:
+        - {name: Clone local, kind: flag, type: bool, long: --local, short: "-l"}
+        - {name: Clone no hardlinks, kind: flag, type: bool, long: --no-hardlinks}
+        - {name: Clone shared, kind: flag, type: bool, long: --shared, short: "-s"}
+        - {name: Clone mirror, kind: flag, type: bool, long: --mirror}
+        - {name: Clone no checkout, kind: flag, type: bool, long: --no-checkout}
+        - {name: Clone jobs, kind: flag, type: int, long: --jobs, short: "-j"}
+        - {name: Clone template, kind: flag, type: string, long: --template}
+        - {name: Clone reference, kind: flag, type: string, long: --reference}
+        - {name: Clone reference if able, kind: flag, type: string, long: --reference-if-able}
+        - {name: Clone dissociate, kind: flag, type: bool, long: --dissociate}
+        - {name: Clone origin, kind: flag, type: string, long: --origin, short: "-o"}
+        - {name: Clone branch, kind: flag, type: string, long: --branch, short: "-b"}
+        - {name: Clone revision, kind: flag, type: string, long: --revision}
+        - {name: Clone upload pack, kind: flag, type: string, long: --upload-pack, short: "-u"}
+        - {name: Clone depth, kind: flag, type: int, long: --depth}
+        - {name: Clone shallow since, kind: flag, type: string, long: --shallow-since}
+        - {name: Clone shallow exclude, kind: flag, type: string, long: --shallow-exclude}
+        - {name: Clone single branch, kind: flag, type: bool, long: --single-branch}
+        - {name: Clone shallow submodules, kind: flag, type: bool, long: --shallow-submodules}
+        - {name: Clone separate git dir, kind: flag, type: string, long: --separate-git-dir}
+        - {name: Clone config, kind: flag, type: string, long: --config, short: "-c", repeatable: true}
+        - {name: Clone server option, kind: flag, type: string, long: --server-option, repeatable: true}
+        - {name: Clone ipv4, kind: flag, type: bool, long: --ipv4, short: "-4"}
+        - {name: Clone ipv6, kind: flag, type: bool, long: --ipv6, short: "-6"}
+        - {name: Clone filter, kind: flag, type: string, long: --filter}
+        - {name: Clone remote submodules, kind: flag, type: bool, long: --remote-submodules}
+        - {name: Clone sparse, kind: flag, type: bool, long: --sparse}
+        - {name: Clone reject shallow, kind: flag, type: bool, long: --reject-shallow}
+        - {name: Clone source, kind: positional, type: string, required: true}
+        - {name: Clone directory, kind: positional, type: path, required: false}
+    options:
+      [Verbose, Quiet, Progress, Clone reject shallow, Clone no checkout, Bare,
+       Clone mirror, Clone local, Clone no hardlinks, Clone shared,
+       Recurse submodules, Clone jobs, Clone template, Clone reference,
+       Clone reference if able, Clone dissociate, Clone origin, Clone branch,
+       Clone revision, Clone upload pack, Clone depth, Clone shallow since,
+       Clone shallow exclude, Clone single branch, Tags, Clone shallow submodules,
+       Clone separate git dir, Clone config, Clone server option, Clone ipv4,
+       Clone ipv6, Clone filter, Clone remote submodules, Clone sparse,
+       Clone source, Clone directory]
+
+  - name: commit
+    description: Record changes to the repository.
+    usage: git commit [<options>] [--] [<pathspec>...]
+    pool:
+      options:
+        - {name: Commit file, kind: flag, type: string, long: --file, short: "-F"}
+        - {name: Commit author, kind: flag, type: string, long: --author}
+        - {name: Commit date, kind: flag, type: string, long: --date}
+        - {name: Commit message, kind: flag, type: string, long: --message, short: "-m"}
+        - {name: Commit reedit message, kind: flag, type: string, long: --reedit-message, short: "-c"}
+        - {name: Commit reuse message, kind: flag, type: string, long: --reuse-message, short: "-C"}
+        - {name: Commit fixup, kind: flag, type: string, long: --fixup}
+        - {name: Commit squash, kind: flag, type: string, long: --squash}
+        - {name: Commit reset author, kind: flag, type: bool, long: --reset-author}
+        - {name: Commit signoff, kind: flag, type: bool, long: --signoff, short: "-s"}
+        - {name: Commit template, kind: flag, type: string, long: --template, short: "-t"}
+        - {name: Commit edit, kind: flag, type: bool, long: --edit, short: "-e"}
+        - {name: Commit cleanup, kind: flag, type: enum, long: --cleanup, values: [strip, whitespace, verbatim, scissors, default]}
+        - {name: Commit status, kind: flag, type: bool, long: --status}
+        - {name: Commit gpg sign, kind: flag, type: bool, long: --gpg-sign, short: "-S"}
+        - {name: Commit all, kind: flag, type: bool, long: --all, short: "-a"}
+        - {name: Commit include, kind: flag, type: bool, long: --include, short: "-i"}
+        - {name: Commit interactive, kind: flag, type: bool, long: --interactive}
+        - {name: Commit only, kind: flag, type: bool, long: --only, short: "-o"}
+        - {name: Commit no verify, kind: flag, type: bool, long: --no-verify, short: "-n"}
+        - {name: Commit dry run, kind: flag, type: bool, long: --dry-run}
+        - {name: Commit short, kind: flag, type: bool, long: --short}
+        - {name: Commit branch, kind: flag, type: bool, long: --branch}
+        - {name: Commit ahead behind, kind: flag, type: bool, long: --ahead-behind}
+        - {name: Commit porcelain, kind: flag, type: bool, long: --porcelain}
+        - {name: Commit long, kind: flag, type: bool, long: --long}
+        - {name: Commit null, kind: flag, type: bool, long: --null, short: "-z"}
+        - {name: Commit amend, kind: flag, type: bool, long: --amend}
+        - {name: Commit untracked files, kind: flag, type: enum, long: --untracked-files, values: [all, normal, no]}
+        - {name: Commit pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Commit pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+    options:
+      [Quiet, Verbose, Commit file, Commit author, Commit date, Commit message,
+       Commit reedit message, Commit reuse message, Commit fixup, Commit squash,
+       Commit reset author, Trailer, Commit signoff, Commit template, Commit edit,
+       Commit cleanup, Commit status, Commit gpg sign, Commit all, Commit include,
+       Commit interactive, Patch, Commit only, Commit no verify, Commit dry run,
+       Commit short, Commit branch, Commit ahead behind, Commit porcelain,
+       Commit long, Commit null, Commit amend, Commit untracked files,
+       Commit pathspec file, Commit pathspec nul, Pathspec]
+
+  - name: diff
+    description: Show changes between commits, commit and working tree, etc.
+    usage: git diff [<options>] [<commit>] [--] [<path>...]
+    pool:
+      options:
+        - {name: Diff cached, kind: flag, type: bool, long: --cached}
+        - {name: Diff merge base, kind: flag, type: bool, long: --merge-base}
+        - {name: Diff no index, kind: flag, type: bool, long: --no-index}
+        - {name: Diff stat, kind: flag, type: bool, long: --stat}
+        - {name: Diff numstat, kind: flag, type: bool, long: --numstat}
+        - {name: Diff name only, kind: flag, type: bool, long: --name-only}
+        - {name: Diff name status, kind: flag, type: bool, long: --name-status}
+        - {name: Diff full index, kind: flag, type: bool, long: --full-index}
+        - {name: Diff patch with raw, kind: flag, type: bool, long: --patch-with-raw}
+        - {name: Diff patch with stat, kind: flag, type: bool, long: --patch-with-stat}
+        - {name: Diff raw, kind: flag, type: bool, long: --raw, short: "-z"}
+        - {name: Diff rewrites, kind: flag, type: bool, long: --break-rewrites, short: "-B"}
+        - {name: Diff renames, kind: flag, type: bool, long: --find-renames, short: "-M"}
+        - {name: Diff copies, kind: flag, type: bool, long: --find-copies, short: "-C"}
+        - {name: Diff find copies harder, kind: flag, type: bool, long: --find-copies-harder}
+        - {name: Diff pickaxe all, kind: flag, type: bool, long: --pickaxe-all}
+        - {name: Diff text, kind: flag, type: bool, long: --text, short: "-a"}
+    options:
+      [Patch, Diff cached, Diff merge base, Diff no index, Diff stat, Diff numstat,
+       Diff name only, Diff name status, Diff full index, Abbrev, Diff patch with raw,
+       Diff patch with stat, Diff raw, Diff rewrites, Diff renames, Diff copies,
+       Diff find copies harder, Diff pickaxe all, Diff text, Revision, Pathspec]
+
+  - name: fetch
+    description: Download objects and refs from another repository.
+    usage: git fetch [<options>] [<repository> [<refspec>...]]
+    pool:
+      options:
+        - {name: Fetch append, kind: flag, type: bool, long: --append, short: "-a"}
+        - {name: Fetch atomic, kind: flag, type: bool, long: --atomic}
+        - {name: Fetch upload pack, kind: flag, type: string, long: --upload-pack}
+        - {name: Fetch multiple, kind: flag, type: bool, long: --multiple, short: "-m"}
+        - {name: Fetch no tags, kind: flag, type: bool, long: --no-tags, short: "-n"}
+        - {name: Fetch jobs, kind: flag, type: int, long: --jobs, short: "-j"}
+        - {name: Fetch prefetch, kind: flag, type: bool, long: --prefetch}
+        - {name: Fetch prune tags, kind: flag, type: bool, long: --prune-tags, short: "-P"}
+        - {name: Fetch porcelain, kind: flag, type: bool, long: --porcelain}
+        - {name: Fetch write head, kind: flag, type: bool, long: --write-fetch-head}
+        - {name: Fetch keep, kind: flag, type: bool, long: --keep, short: "-k"}
+        - {name: Fetch update head ok, kind: flag, type: bool, long: --update-head-ok, short: "-u"}
+        - {name: Fetch depth, kind: flag, type: int, long: --depth}
+        - {name: Fetch shallow since, kind: flag, type: string, long: --shallow-since}
+        - {name: Fetch shallow exclude, kind: flag, type: string, long: --shallow-exclude}
+        - {name: Fetch deepen, kind: flag, type: int, long: --deepen}
+        - {name: Fetch unshallow, kind: flag, type: bool, long: --unshallow}
+        - {name: Fetch refetch, kind: flag, type: bool, long: --refetch}
+        - {name: Fetch update shallow, kind: flag, type: bool, long: --update-shallow}
+        - {name: Fetch refmap, kind: flag, type: string, long: --refmap}
+        - {name: Fetch server option, kind: flag, type: string, long: --server-option, short: "-o", repeatable: true}
+        - {name: Fetch ipv4, kind: flag, type: bool, long: --ipv4, short: "-4"}
+        - {name: Fetch ipv6, kind: flag, type: bool, long: --ipv6, short: "-6"}
+        - {name: Fetch negotiation tip, kind: flag, type: string, long: --negotiation-tip, repeatable: true}
+        - {name: Fetch negotiate only, kind: flag, type: bool, long: --negotiate-only}
+        - {name: Fetch filter, kind: flag, type: string, long: --filter}
+        - {name: Fetch auto maintenance, kind: flag, type: bool, long: --auto-maintenance}
+        - {name: Fetch show forced, kind: flag, type: bool, long: --show-forced-updates}
+        - {name: Fetch commit graph, kind: flag, type: bool, long: --write-commit-graph}
+        - {name: Fetch stdin, kind: flag, type: bool, long: --stdin}
+    options:
+      [Verbose, Quiet, All, Set upstream, Fetch append, Fetch atomic,
+       Fetch upload pack, Force, Fetch multiple, Tags, Fetch no tags, Fetch jobs,
+       Fetch prefetch, Prune, Fetch prune tags, Recurse submodules, Dry run,
+       Fetch porcelain, Fetch write head, Fetch keep, Fetch update head ok,
+       Progress, Fetch depth, Fetch shallow since, Fetch shallow exclude,
+       Fetch deepen, Fetch unshallow, Fetch refetch, Fetch update shallow,
+       Fetch refmap, Fetch server option, Fetch ipv4, Fetch ipv6,
+       Fetch negotiation tip, Fetch negotiate only, Fetch filter,
+       Fetch auto maintenance, Fetch show forced, Fetch commit graph, Fetch stdin,
+       Repository, Refspec]
+
+  - name: log
+    description: Show commit logs.
+    usage: git log [<options>] [<revision-range>] [[--] <path>...]
+    pool:
+      options:
+        - {name: Log oneline, kind: flag, type: bool, long: --oneline}
+        - {name: Log graph, kind: flag, type: bool, long: --graph}
+        - {name: Log decorate, kind: flag, type: bool, long: --decorate}
+        - {name: Log source, kind: flag, type: bool, long: --source}
+        - {name: Log use mailmap, kind: flag, type: bool, long: --use-mailmap}
+        - {name: Log skip, kind: flag, type: int, long: --skip}
+        - {name: Log since, kind: flag, type: string, long: --since}
+        - {name: Log until, kind: flag, type: string, long: --until}
+        - {name: Log author, kind: flag, type: string, long: --author}
+        - {name: Log committer, kind: flag, type: string, long: --committer}
+        - {name: Log grep, kind: flag, type: string, long: --grep}
+        - {name: Log regexp ignore case, kind: flag, type: bool, long: --regexp-ignore-case, short: "-i"}
+        - {name: Log pretty, kind: flag, type: string, long: --pretty}
+        - {name: Log format, kind: flag, type: string, long: --format}
+        - {name: Log abbrev commit, kind: flag, type: bool, long: --abbrev-commit}
+        - {name: Log no merges, kind: flag, type: bool, long: --no-merges}
+        - {name: Log merges, kind: flag, type: bool, long: --merges}
+        - {name: Log first parent, kind: flag, type: bool, long: --first-parent}
+        - {name: Log reverse, kind: flag, type: bool, long: --reverse}
+        - {name: Log follow, kind: flag, type: bool, long: --follow}
+        - {name: Log pickaxe, kind: flag, type: string, long: --pickaxe-string, short: "-S"}
+        - {name: Log pickaxe regex, kind: flag, type: string, long: --pickaxe-regex, short: "-G"}
+        - {name: Log name only, kind: flag, type: bool, long: --name-only}
+        - {name: Log name status, kind: flag, type: bool, long: --name-status}
+    options:
+      [Quiet, Log oneline, Log graph, Log decorate, Log source, Log use mailmap,
+       Max count, Log skip, Log since, Log until, Log author, Log committer,
+       Log grep, Log regexp ignore case, Log pretty, Log format, Abbrev,
+       Log abbrev commit, Stat, Patch, Log name only, Log name status,
+       Log no merges, Log merges, Log first parent, Log reverse, Log follow,
+       Log pickaxe, Log pickaxe regex, All, Revision, Pathspec]
+
+  - name: merge
+    description: Join two or more development histories together.
+    usage: git merge [<options>] [<commit>...]
+    pool:
+      options:
+        - {name: Merge no stat, kind: flag, type: bool, long: --no-stat, short: "-n"}
+        - {name: Merge squash, kind: flag, type: bool, long: --squash}
+        - {name: Merge log, kind: flag, type: bool, long: --log}
+        - {name: Merge commit, kind: flag, type: bool, long: --commit}
+        - {name: Merge edit, kind: flag, type: bool, long: --edit, short: "-e"}
+        - {name: Merge cleanup, kind: flag, type: enum, long: --cleanup, values: [strip, whitespace, verbatim, scissors, default]}
+        - {name: Merge ff, kind: flag, type: bool, long: --ff}
+        - {name: Merge ff only, kind: flag, type: bool, long: --ff-only}
+        - {name: Merge rerere autoupdate, kind: flag, type: bool, long: --rerere-autoupdate}
+        - {name: Merge verify signatures, kind: flag, type: bool, long: --verify-signatures}
+        - {name: Merge strategy, kind: flag, type: string, long: --strategy, short: "-s"}
+        - {name: Merge strategy option, kind: flag, type: string, long: --strategy-option, short: "-X", repeatable: true}
+        - {name: Merge message, kind: flag, type: string, long: --message, short: "-m"}
+        - {name: Merge file, kind: flag, type: string, long: --file, short: "-F"}
+        - {name: Merge into name, kind: flag, type: string, long: --into-name}
+        - {name: Merge abort, kind: flag, type: bool, long: --abort}
+        - {name: Merge quit, kind: flag, type: bool, long: --quit}
+        - {name: Merge continue, kind: flag, type: bool, long: --continue}
+        - {name: Merge allow unrelated, kind: flag, type: bool, long: --allow-unrelated-histories}
+        - {name: Merge gpg sign, kind: flag, type: bool, long: --gpg-sign, short: "-S"}
+        - {name: Merge autostash, kind: flag, type: bool, long: --autostash}
+        - {name: Merge overwrite ignore, kind: flag, type: bool, long: --overwrite-ignore}
+        - {name: Merge signoff, kind: flag, type: bool, long: --signoff}
+        - {name: Merge no verify, kind: flag, type: bool, long: --no-verify}
+        - {name: Merge commitish, kind: positional, type: string, required: false}
+    options:
+      [Merge no stat, Stat, Merge squash, Merge log, Merge commit, Merge edit,
+       Merge cleanup, Merge ff, Merge ff only, Merge rerere autoupdate,
+       Merge verify signatures, Merge strategy, Merge strategy option,
+       Merge message, Merge file, Merge into name, Verbose, Quiet, Merge abort,
+       Merge quit, Merge continue, Merge allow unrelated, Progress,
+       Merge gpg sign, Merge autostash, Merge overwrite ignore, Merge signoff,
+       Merge no verify, Merge commitish]
+
+  - name: mv
+    description: Move or rename a file, a directory, or a symlink.
+    usage: git mv [<options>] <source>... <destination>
+    pool:
+      options:
+        - {name: Mv skip, kind: flag, type: bool, long: --skip, short: "-k"}
+        - {name: Mv sparse, kind: flag, type: bool, long: --sparse}
+    options: [Dry run, Verbose, Force, Mv skip, Mv sparse, Pathspec]
+
+  - name: pull
+    description: Fetch from and integrate with another repository or a local branch.
+    usage: git pull [<options>] [<repository> [<refspec>...]]
+    pool:
+      options:
+        - {name: Pull rebase, kind: flag, type: enum, long: --rebase, short: "-r", values: [false, true, merges, interactive]}
+        - {name: Pull no stat, kind: flag, type: bool, long: --no-stat, short: "-n"}
+        - {name: Pull log, kind: flag, type: bool, long: --log}
+        - {name: Pull signoff, kind: flag, type: bool, long: --signoff}
+        - {name: Pull squash, kind: flag, type: bool, long: --squash}
+        - {name: Pull commit, kind: flag, type: bool, long: --commit}
+        - {name: Pull edit, kind: flag, type: bool, long: --edit}
+        - {name: Pull cleanup, kind: flag, type: enum, long: --cleanup, values: [strip, whitespace, verbatim, scissors, default]}
+        - {name: Pull ff, kind: flag, type: bool, long: --ff}
+        - {name: Pull ff only, kind: flag, type: bool, long: --ff-only}
+        - {name: Pull verify signatures, kind: flag, type: bool, long: --verify-signatures}
+        - {name: Pull autostash, kind: flag, type: bool, long: --autostash}
+        - {name: Pull strategy, kind: flag, type: string, long: --strategy, short: "-s"}
+        - {name: Pull strategy option, kind: flag, type: string, long: --strategy-option, short: "-X", repeatable: true}
+        - {name: Pull gpg sign, kind: flag, type: bool, long: --gpg-sign, short: "-S"}
+        - {name: Pull allow unrelated, kind: flag, type: bool, long: --allow-unrelated-histories}
+        - {name: Pull append, kind: flag, type: bool, long: --append, short: "-a"}
+        - {name: Pull upload pack, kind: flag, type: string, long: --upload-pack}
+        - {name: Pull jobs, kind: flag, type: int, long: --jobs, short: "-j"}
+        - {name: Pull depth, kind: flag, type: int, long: --depth}
+        - {name: Pull keep, kind: flag, type: bool, long: --keep, short: "-k"}
+        - {name: Pull server option, kind: flag, type: string, long: --server-option, short: "-o", repeatable: true}
+        - {name: Pull ipv4, kind: flag, type: bool, long: --ipv4, short: "-4"}
+        - {name: Pull ipv6, kind: flag, type: bool, long: --ipv6, short: "-6"}
+    options:
+      [Verbose, Quiet, Progress, Recurse submodules, All, Set upstream,
+       Pull rebase, Pull no stat, Stat, Pull log, Pull signoff, Pull squash,
+       Pull commit, Pull edit, Pull cleanup, Pull ff, Pull ff only, Tags, Prune,
+       Pull verify signatures, Pull autostash, Pull strategy,
+       Pull strategy option, Pull gpg sign, Pull allow unrelated, Pull append,
+       Pull upload pack, Pull jobs, Pull depth, Pull keep, Pull server option,
+       Pull ipv4, Pull ipv6, Dry run, Repository, Refspec]
+
+  - name: push
+    description: Update remote refs along with associated objects.
+    usage: git push [<options>] [<repository> [<refspec>...]]
+    pool:
+      options:
+        - {name: Push repo, kind: flag, type: string, long: --repo}
+        - {name: Push branches, kind: flag, type: bool, long: --branches}
+        - {name: Push mirror, kind: flag, type: bool, long: --mirror}
+        - {name: Push delete, kind: flag, type: bool, long: --delete, short: "-d"}
+        - {name: Push porcelain, kind: flag, type: bool, long: --porcelain}
+        - {name: Push force with lease, kind: flag, type: string, long: --force-with-lease}
+        - {name: Push force if includes, kind: flag, type: bool, long: --force-if-includes}
+        - {name: Push thin, kind: flag, type: bool, long: --thin}
+        - {name: Push receive pack, kind: flag, type: string, long: --receive-pack}
+        - {name: Push no verify, kind: flag, type: bool, long: --no-verify}
+        - {name: Push follow tags, kind: flag, type: bool, long: --follow-tags}
+        - {name: Push signed, kind: flag, type: enum, long: --signed, values: [yes, no, if-asked]}
+        - {name: Push atomic, kind: flag, type: bool, long: --atomic}
+        - {name: Push option, kind: flag, type: string, long: --push-option, short: "-o", repeatable: true}
+        - {name: Push ipv4, kind: flag, type: bool, long: --ipv4, short: "-4"}
+        - {name: Push ipv6, kind: flag, type: bool, long: --ipv6, short: "-6"}
+    options:
+      [Verbose, Quiet, Push repo, All, Push branches, Push mirror, Push delete,
+       Tags, Dry run, Push porcelain, Force, Push force with lease,
+       Push force if includes, Recurse submodules, Push thin, Push receive pack,
+       Set upstream, Progress, Prune, Push no verify, Push follow tags,
+       Push signed, Push atomic, Push option, Push ipv4, Push ipv6,
+       Repository, Refspec]
+
+  - name: rebase
+    description: Reapply commits on top of another base tip.
+    usage: git rebase [-i] [<options>] [<upstream> [<branch>]]
+    pool:
+      options:
+        - {name: Rebase onto, kind: flag, type: string, long: --onto}
+        - {name: Rebase keep base, kind: flag, type: bool, long: --keep-base}
+        - {name: Rebase interactive, kind: flag, type: bool, long: --interactive, short: "-i"}
+        - {name: Rebase apply, kind: flag, type: bool, long: --apply}
+        - {name: Rebase merge, kind: flag, type: bool, long: --merge, short: "-m"}
+        - {name: Rebase continue, kind: flag, type: bool, long: --continue}
+        - {name: Rebase skip, kind: flag, type: bool, long: --skip}
+        - {name: Rebase abort, kind: flag, type: bool, long: --abort}
+        - {name: Rebase quit, kind: flag, type: bool, long: --quit}
+        - {name: Rebase edit todo, kind: flag, type: bool, long: --edit-todo}
+        - {name: Rebase show patch, kind: flag, type: bool, long: --show-current-patch}
+        - {name: Rebase root, kind: flag, type: bool, long: --root}
+        - {name: Rebase autosquash, kind: flag, type: bool, long: --autosquash}
+        - {name: Rebase update refs, kind: flag, type: bool, long: --update-refs}
+        - {name: Rebase autostash, kind: flag, type: bool, long: --autostash}
+        - {name: Rebase committer date, kind: flag, type: bool, long: --committer-date-is-author-date}
+        - {name: Rebase reset author date, kind: flag, type: bool, long: --reset-author-date}
+        - {name: Rebase ignore whitespace, kind: flag, type: bool, long: --ignore-whitespace}
+        - {name: Rebase whitespace, kind: flag, type: string, long: --whitespace}
+        - {name: Rebase force, kind: flag, type: bool, long: --force-rebase, short: "-f"}
+        - {name: Rebase no ff, kind: flag, type: bool, long: --no-ff}
+        - {name: Rebase ff, kind: flag, type: bool, long: --ff}
+        - {name: Rebase empty, kind: flag, type: enum, long: --empty, values: [drop, keep, stop]}
+        - {name: Rebase exec, kind: flag, type: string, long: --exec, short: "-x", repeatable: true}
+        - {name: Rebase merges, kind: flag, type: bool, long: --rebase-merges, short: "-r"}
+        - {name: Rebase fork point, kind: flag, type: bool, long: --fork-point}
+        - {name: Rebase strategy, kind: flag, type: string, long: --strategy, short: "-s"}
+        - {name: Rebase strategy option, kind: flag, type: string, long: --strategy-option, short: "-X", repeatable: true}
+        - {name: Rebase reschedule, kind: flag, type: bool, long: --reschedule-failed-exec}
+        - {name: Rebase reapply, kind: flag, type: bool, long: --reapply-cherry-picks}
+        - {name: Rebase signoff, kind: flag, type: bool, long: --signoff}
+        - {name: Rebase gpg sign, kind: flag, type: bool, long: --gpg-sign, short: "-S"}
+        - {name: Rebase upstream, kind: positional, type: string, required: false}
+        - {name: Rebase branch, kind: positional, type: string, required: false}
+    options:
+      [Rebase onto, Rebase keep base, Rebase interactive, Rebase apply,
+       Rebase merge, Rebase continue, Rebase skip, Rebase abort, Rebase quit,
+       Rebase edit todo, Rebase show patch, Rebase root, Rebase autosquash,
+       Rebase update refs, Rebase autostash, Rebase committer date,
+       Rebase reset author date, Rebase ignore whitespace, Rebase whitespace,
+       Rebase force, Rebase no ff, Rebase ff, Rebase empty, Rebase exec,
+       Rebase merges, Rebase fork point, Rebase strategy, Rebase strategy option,
+       Rebase reschedule, Rebase reapply, Rebase signoff, Rebase gpg sign,
+       Quiet, Verbose, Progress, Rebase upstream, Rebase branch]
+
+  - name: reset
+    description: Reset current HEAD to the specified state.
+    usage: git reset [--mixed | --soft | --hard | --merge | --keep] [<commit>]
+    pool:
+      options:
+        - {name: Reset mixed, kind: flag, type: bool, long: --mixed, conflicts: [Reset soft, Reset hard, Reset merge, Reset keep]}
+        - {name: Reset soft, kind: flag, type: bool, long: --soft, conflicts: [Reset mixed, Reset hard, Reset merge, Reset keep]}
+        - {name: Reset hard, kind: flag, type: bool, long: --hard, conflicts: [Reset mixed, Reset soft, Reset merge, Reset keep]}
+        - {name: Reset merge, kind: flag, type: bool, long: --merge, conflicts: [Reset mixed, Reset soft, Reset hard, Reset keep]}
+        - {name: Reset keep, kind: flag, type: bool, long: --keep, conflicts: [Reset mixed, Reset soft, Reset hard, Reset merge]}
+        - {name: Reset refresh, kind: flag, type: bool, long: --refresh}
+        - {name: Reset no refresh, kind: flag, type: bool, long: --no-refresh}
+        - {name: Reset intent to add, kind: flag, type: bool, long: --intent-to-add, short: "-N"}
+        - {name: Reset pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Reset pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+    options:
+      [Quiet, Reset mixed, Reset soft, Reset hard, Reset merge, Reset keep,
+       Reset refresh, Reset no refresh, Recurse submodules, Patch,
+       Reset intent to add, Reset pathspec file, Reset pathspec nul,
+       Revision, Pathspec]
+
+  - name: rm
+    description: Remove files from the working tree and from the index.
+    usage: git rm [<options>] [--] <pathspec>...
+    pool:
+      options:
+        - {name: Rm cached, kind: flag, type: bool, long: --cached}
+        - {name: Rm recursive, kind: flag, type: bool, long: --recursive, short: "-r"}
+        - {name: Rm ignore unmatch, kind: flag, type: bool, long: --ignore-unmatch}
+        - {name: Rm sparse, kind: flag, type: bool, long: --sparse}
+        - {name: Rm pathspec file, kind: flag, type: string, long: --pathspec-from-file}
+        - {name: Rm pathspec nul, kind: flag, type: bool, long: --pathspec-file-nul}
+    options:
+      [Dry run, Quiet, Rm cached, Force, Rm recursive, Rm ignore unmatch,
+       Rm sparse, Rm pathspec file, Rm pathspec nul, Pathspec]
+
+  - name: show
+    description: Show various types of objects.
+    usage: git show [<options>] <object>...
+    pool:
+      options:
+        - {name: Show source, kind: flag, type: bool, long: --source}
+        - {name: Show use mailmap, kind: flag, type: bool, long: --use-mailmap}
+        - {name: Show decorate, kind: flag, type: bool, long: --decorate}
+        - {name: Show abbrev commit, kind: flag, type: bool, long: --abbrev-commit}
+        - {name: Show pretty, kind: flag, type: string, long: --pretty}
+        - {name: Show format, kind: flag, type: string, long: --format}
+        - {name: Show objects, kind: positional, type: string, required: true, variadic: true}
+    options:
+      [Quiet, Show source, Show use mailmap, Show decorate, Show abbrev commit,
+       Show pretty, Show format, Stat, Patch, Abbrev, Show objects]
+
+  - name: status
+    description: Show the working tree status.
+    usage: git status [<options>] [--] [<pathspec>...]
+    pool:
+      options:
+        - {name: Status short, kind: flag, type: bool, long: --short, short: "-s"}
+        - {name: Status branch, kind: flag, type: bool, long: --branch, short: "-b"}
+        - {name: Status show stash, kind: flag, type: bool, long: --show-stash}
+        - {name: Status ahead behind, kind: flag, type: bool, long: --ahead-behind}
+        - {name: Status porcelain, kind: flag, type: bool, long: --porcelain}
+        - {name: Status long, kind: flag, type: bool, long: --long}
+        - {name: Status null, kind: flag, type: bool, long: --null, short: "-z"}
+        - {name: Status untracked files, kind: flag, type: enum, long: --untracked-files, values: [all, normal, no]}
+        - {name: Status ignored, kind: flag, type: enum, long: --ignored, values: [traditional, matching, no]}
+        - {name: Status ignore submodules, kind: flag, type: enum, long: --ignore-submodules, values: [all, dirty, untracked]}
+        - {name: Status column, kind: flag, type: enum, long: --column, values: [always, auto, never]}
+        - {name: Status no renames, kind: flag, type: bool, long: --no-renames}
+        - {name: Status renames, kind: flag, type: bool, long: --renames}
+        - {name: Status find renames, kind: flag, type: bool, long: --find-renames, short: "-M"}
+    options:
+      [Verbose, Status short, Status branch, Status show stash,
+       Status ahead behind, Status porcelain, Status long, Status null,
+       Status untracked files, Status ignored, Status ignore submodules,
+       Status column, Status no renames, Status renames, Status find renames,
+       Pathspec]
+
+  - name: tag
+    description: Create, list, delete or verify a tag object signed with GPG.
+    usage: git tag [<options>] <tagname> [<commit>]
+    pool:
+      options:
+        - {name: Tag list, kind: flag, type: bool, long: --list, short: "-l"}
+        - {name: Tag lines, kind: flag, type: int, long: --lines, short: "-n"}
+        - {name: Tag delete, kind: flag, type: bool, long: --delete, short: "-d"}
+        - {name: Tag verify, kind: flag, type: bool, long: --verify, short: "-v"}
+        - {name: Tag annotate, kind: flag, type: bool, long: --annotate, short: "-a"}
+        - {name: Tag message, kind: flag, type: string, long: --message, short: "-m"}
+        - {name: Tag file, kind: flag, type: string, long: --file, short: "-F"}
+        - {name: Tag edit, kind: flag, type: bool, long: --edit, short: "-e"}
+        - {name: Tag sign, kind: flag, type: bool, long: --sign, short: "-s"}
+        - {name: Tag local user, kind: flag, type: string, long: --local-user, short: "-u"}
+        - {name: Tag create reflog, kind: flag, type: bool, long: --create-reflog}
+        - {name: Tag column, kind: flag, type: enum, long: --column, values: [always, auto, never]}
+        - {name: Tag contains, kind: flag, type: string, long: --contains}
+        - {name: Tag no contains, kind: flag, type: string, long: --no-contains}
+        - {name: Tag merged, kind: flag, type: string, long: --merged}
+        - {name: Tag no merged, kind: flag, type: string, long: --no-merged}
+        - {name: Tag sort, kind: flag, type: string, long: --sort}
+        - {name: Tag points at, kind: flag, type: string, long: --points-at}
+        - {name: Tag name, kind: positional, type: string, required: false, variadic: true}
+    options:
+      [Tag list, Tag lines, Tag delete, Tag verify, Tag annotate, Tag message,
+       Tag file, Tag edit, Tag sign, Tag local user, Force, Tag create reflog,
+       Tag column, Tag contains, Tag no contains, Tag merged, Tag no merged,
+       Tag sort, Tag points at, Format, Color, Ignore case, Trailer, Tag name]
+
+  - name: blame
+    description: Show what revision and author last modified each line of a file.
+    usage: git blame [<options>] [<rev>] [--] <file>
+    pool:
+      options:
+        - {name: Blame incremental, kind: flag, type: bool, long: --incremental}
+        - {name: Blame root, kind: flag, type: bool, long: --root}
+        - {name: Blame show stats, kind: flag, type: bool, long: --show-stats}
+        - {name: Blame show name, kind: flag, type: bool, long: --show-name, short: "-f"}
+        - {name: Blame show number, kind: flag, type: bool, long: --show-number, short: "-n"}
+        - {name: Blame porcelain, kind: flag, type: bool, long: --porcelain, short: "-p"}
+        - {name: Blame line porcelain, kind: flag, type: bool, long: --line-porcelain}
+        - {name: Blame show email, kind: flag, type: bool, long: --show-email, short: "-e"}
+        - {name: Blame ignore whitespace, kind: flag, type: bool, long: --ignore-whitespace, short: "-w"}
+        - {name: Blame ignore rev, kind: flag, type: string, long: --ignore-rev, repeatable: true}
+        - {name: Blame ignore revs file, kind: flag, type: string, long: --ignore-revs-file}
+        - {name: Blame color lines, kind: flag, type: bool, long: --color-lines}
+        - {name: Blame color by age, kind: flag, type: bool, long: --color-by-age}
+        - {name: Blame minimal, kind: flag, type: bool, long: --minimal}
+        - {name: Blame line range, kind: flag, type: string, long: --line-range, short: "-L"}
+        - {name: Blame revision, kind: positional, type: string, required: false}
+        - {name: Blame file, kind: positional, type: path, required: true}
+    options:
+      [Blame incremental, Blame root, Blame show stats, Blame show name,
+       Blame show number, Blame porcelain, Blame line porcelain,
+       Blame show email, Blame ignore whitespace, Blame ignore rev,
+       Blame ignore revs file, Blame color lines, Blame color by age,
+       Blame minimal, Blame line range, Abbrev, Progress, Blame revision,
+       Blame file]
+
+  - name: clean
+    description: Remove untracked files from the working tree.
+    usage: git clean [-d] [-f] [<options>] [<pathspec>...]
+    pool:
+      options:
+        - {name: Clean interactive, kind: flag, type: bool, long: --interactive, short: "-i"}
+        - {name: Clean directories, kind: flag, type: bool, long: --directories, short: "-d"}
+        - {name: Clean exclude, kind: flag, type: string, long: --exclude, short: "-e", repeatable: true}
+        - {name: Clean ignored, kind: flag, type: bool, long: --ignored-files, short: "-x"}
+        - {name: Clean only ignored, kind: flag, type: bool, long: --only-ignored, short: "-X"}
+    options:
+      [Quiet, Dry run, Force, Clean interactive, Clean directories, Clean exclude,
+       Clean ignored, Clean only ignored, Pathspec]
+
+  - name: init
+    description: Create an empty Git repository or reinitialize an existing one.
+    usage: git init [<options>] [<directory>]
+    pool:
+      options:
+        - {name: Init template, kind: flag, type: string, long: --template}
+        - {name: Init shared, kind: flag, type: bool, long: --shared}
+        - {name: Init separate git dir, kind: flag, type: string, long: --separate-git-dir}
+        - {name: Init initial branch, kind: flag, type: string, long: --initial-branch, short: "-b"}
+        - {name: Init object format, kind: flag, type: enum, long: --object-format, values: [sha1, sha256]}
+        - {name: Init ref format, kind: flag, type: string, long: --ref-format}
+        - {name: Init directory, kind: positional, type: path, required: false}
+    options:
+      [Quiet, Bare, Init template, Init shared, Init separate git dir,
+       Init initial branch, Init object format, Init ref format, Init directory]
+
+  - name: grep
+    description: Print lines matching a pattern.
+    usage: git grep [<options>] <pattern> [<rev>...] [[--] <path>...]
+    pool:
+      options:
+        - {name: Grep cached, kind: flag, type: bool, long: --cached}
+        - {name: Grep untracked, kind: flag, type: bool, long: --untracked}
+        - {name: Grep exclude standard, kind: flag, type: bool, long: --exclude-standard}
+        - {name: Grep invert match, kind: flag, type: bool, long: --invert-match, short: "-v"}
+        - {name: Grep word regexp, kind: flag, type: bool, long: --word-regexp, short: "-w"}
+        - {name: Grep text, kind: flag, type: bool, long: --text, short: "-a"}
+        - {name: Grep no text, kind: flag, type: bool, long: --no-text, short: "-I"}
+        - {name: Grep extended regexp, kind: flag, type: bool, long: --extended-regexp, short: "-E"}
+        - {name: Grep basic regexp, kind: flag, type: bool, long: --basic-regexp, short: "-G"}
+        - {name: Grep fixed strings, kind: flag, type: bool, long: --fixed-strings, short: "-F"}
+        - {name: Grep perl regexp, kind: flag, type: bool, long: --perl-regexp, short: "-P"}
+        - {name: Grep line number, kind: flag, type: bool, long: --line-number, short: "-n"}
+        - {name: Grep column, kind: flag, type: bool, long: --column}
+        - {name: Grep full name, kind: flag, type: bool, long: --full-name}
+        - {name: Grep files with matches, kind: flag, type: bool, long: --files-with-matches, short: "-l"}
+        - {name: Grep files without match, kind: flag, type: bool, long: --files-without-match, short: "-L"}
+        - {name: Grep null, kind: flag, type: bool, long: --null, short: "-z"}
+        - {name: Grep only matching, kind: flag, type: bool, long: --only-matching, short: "-o"}
+        - {name: Grep count, kind: flag, type: bool, long: --count, short: "-c"}
+        - {name: Grep break, kind: flag, type: bool, long: --break}
+        - {name: Grep heading, kind: flag, type: bool, long: --heading}
+        - {name: Grep context, kind: flag, type: int, long: --context, short: "-C"}
+        - {name: Grep before context, kind: flag, type: int, long: --before-context, short: "-B"}
+        - {name: Grep after context, kind: flag, type: int, long: --after-context, short: "-A"}
+        - {name: Grep max count, kind: flag, type: int, long: --max-count, short: "-m"}
+        - {name: Grep show function, kind: flag, type: bool, long: --show-function, short: "-p"}
+        - {name: Grep function context, kind: flag, type: bool, long: --function-context, short: "-W"}
+        - {name: Grep threads, kind: flag, type: int, long: --threads}
+        - {name: Grep recurse submodules, kind: flag, type: bool, long: --recurse-submodules}
+        - {name: Grep pattern, kind: positional, type: string, required: false}
+    options:
+      [Grep cached, Grep untracked, Grep exclude standard, Grep invert match,
+       Grep word regexp, Grep text, Grep no text, Grep extended regexp,
+       Grep basic regexp, Grep fixed strings, Grep perl regexp, Ignore case,
+       Grep line number, Grep column, Grep full name, Grep files with matches,
+       Grep files without match, Grep null, Grep only matching, Grep count,
+       Grep break, Grep heading, Grep context, Grep before context,
+       Grep after context, Grep max count, Grep show function,
+       Grep function context, Quiet, Grep threads, Grep recurse submodules,
+       Grep pattern, Revision, Pathspec]
+
+  - name: remote
+    description: Manage the set of repositories ("remotes") whose branches you track.
+    usage: git remote [-v] <subcommand>
+    options: [Verbose]
+    subcommands:
+      - name: add
+        description: Add a remote named <name> for the repository at <url>.
+        usage: git remote add [<options>] <name> <url>
+        pool:
+          options:
+            - {name: Remote add track, kind: flag, type: string, long: --track, short: "-t", repeatable: true}
+            - {name: Remote add fetch, kind: flag, type: bool, long: --fetch, short: "-f"}
+            - {name: Remote add no tags, kind: flag, type: bool, long: --no-tags}
+            - {name: Remote add mirror, kind: flag, type: enum, long: --mirror, values: [fetch, push]}
+            - {name: Remote name, kind: positional, type: string, required: true}
+            - {name: Remote url, kind: positional, type: string, required: true}
+        options: [Tags, Remote add track, Remote add fetch, Remote add no tags, Remote add mirror, Remote name, Remote url]
+
+      - name: remove
+        description: Remove the remote named <name>.
+        usage: git remote remove <name>
+        pool:
+          options:
+            - {name: Remote remove name, kind: positional, type: string, required: true}
+        options: [Remote remove name]
+
+      - name: rename
+        description: Rename the remote named <old> to <new>.
+        usage: git remote rename <old> <new>
+        pool:
+          options:
+            - {name: Remote old name, kind: positional, type: string, required: true}
+            - {name: Remote new name, kind: positional, type: string, required: true}
+        options: [Progress, Remote old name, Remote new name]
+
+      - name: show
+        description: Give some information about the remote <name>.
+        usage: git remote show [-n] <name>
+        pool:
+          options:
+            - {name: Remote show name, kind: positional, type: string, required: true}
+        options: [Verbose, Remote show name]
+
+      - name: prune
+        description: Delete stale references associated with <name>.
+        usage: git remote prune [-n] <name>
+        pool:
+          options:
+            - {name: Remote prune name, kind: positional, type: string, required: true}
+        options: [Dry run, Remote prune name]
+
+      - name: update
+        description: Fetch updates for remotes or remote groups.
+        usage: git remote update [-p] [<remote>...]
+        pool:
+          options:
+            - {name: Remote update names, kind: positional, type: string, required: false, variadic: true}
+        options: [Prune, Remote update names]
+
+      - name: set-head
+        description: Set or delete the default branch for a remote.
+        usage: git remote set-head <name> (-a | -d | <branch>)
+        pool:
+          options:
+            - {name: Remote set-head auto, kind: flag, type: bool, long: --auto, short: "-a"}
+            - {name: Remote set-head delete, kind: flag, type: bool, long: --delete, short: "-d"}
+            - {name: Remote set-head name, kind: positional, type: string, required: true}
+            - {name: Remote set-head branch, kind: positional, type: string, required: false}
+        options: [Remote set-head auto, Remote set-head delete, Remote set-head name, Remote set-head branch]
+
+      - name: set-url
+        description: Change the URL of a remote.
+        usage: git remote set-url [<options>] <name> <newurl> [<oldurl>]
+        pool:
+          options:
+            - {name: Remote set-url push, kind: flag, type: bool, long: --push}
+            - {name: Remote set-url add, kind: flag, type: bool, long: --add}
+            - {name: Remote set-url delete, kind: flag, type: bool, long: --delete}
+            - {name: Remote set-url name, kind: positional, type: string, required: true}
+            - {name: Remote set-url new url, kind: positional, type: string, required: true}
+            - {name: Remote set-url old url, kind: positional, type: string, required: false}
+        options: [Remote set-url push, Remote set-url add, Remote set-url delete, Remote set-url name, Remote set-url new url, Remote set-url old url]
+
+      - name: get-url
+        description: Retrieve the URLs for a remote.
+        usage: git remote get-url [<options>] <name>
+        pool:
+          options:
+            - {name: Remote get-url push, kind: flag, type: bool, long: --push}
+            - {name: Remote get-url all, kind: flag, type: bool, long: --all}
+            - {name: Remote get-url name, kind: positional, type: string, required: true}
+        options: [Remote get-url push, Remote get-url all, Remote get-url name]
+
+  - name: stash
+    description: Stash the changes in a dirty working directory away.
+    usage: git stash <subcommand>
+    subcommands:
+      - name: push
+        description: Save your local modifications to a new stash.
+        usage: git stash push [<options>] [<pathspec>...]
+        pool:
+          options:
+            - {name: Stash push patch, kind: flag, type: bool, long: --patch, short: "-p"}
+            - {name: Stash push staged, kind: flag, type: bool, long: --staged, short: "-S"}
+            - {name: Stash push keep index, kind: flag, type: bool, long: --keep-index, short: "-k"}
+            - {name: Stash push untracked, kind: flag, type: bool, long: --include-untracked, short: "-u"}
+            - {name: Stash push all, kind: flag, type: bool, long: --all, short: "-a"}
+            - {name: Stash push message, kind: flag, type: string, long: --message, short: "-m"}
+        options: [Quiet, Stash push patch, Stash push staged, Stash push keep index, Stash push untracked, Stash push all, Stash push message, Pathspec]
+
+      - name: pop
+        description: Remove a single stashed state and apply it.
+        usage: git stash pop [<options>] [<stash>]
+        pool:
+          options:
+            - {name: Stash pop index, kind: flag, type: bool, long: --index}
+            - {name: Stash pop name, kind: positional, type: string, required: false}
+        options: [Quiet, Stash pop index, Stash pop name]
+
+      - name: apply
+        description: Apply a stashed state.
+        usage: git stash apply [<options>] [<stash>]
+        pool:
+          options:
+            - {name: Stash apply index, kind: flag, type: bool, long: --index}
+            - {name: Stash apply name, kind: positional, type: string, required: false}
+        options: [Quiet, Stash apply index, Stash apply name]
+
+      - name: list
+        description: List the stashes that you currently have.
+        usage: git stash list [<log-options>]
+        options: [Max count, Stat, Patch]
+
+      - name: show
+        description: Show the changes recorded in a stash.
+        usage: git stash show [<options>] [<stash>]
+        pool:
+          options:
+            - {name: Stash show untracked, kind: flag, type: bool, long: --include-untracked, short: "-u"}
+            - {name: Stash show only untracked, kind: flag, type: bool, long: --only-untracked}
+            - {name: Stash show name, kind: positional, type: string, required: false}
+        options: [Stat, Patch, Stash show untracked, Stash show only untracked, Stash show name]
+
+      - name: drop
+        description: Remove a single stashed state from the stash list.
+        usage: git stash drop [<options>] [<stash>]
+        pool:
+          options:
+            - {name: Stash drop name, kind: positional, type: string, required: false}
+        options: [Quiet, Stash drop name]
+
+      - name: branch
+        description: Create and check out a new branch starting from a stash.
+        usage: git stash branch <branchname> [<stash>]
+        pool:
+          options:
+            - {name: Stash branch name, kind: positional, type: string, required: true}
+            - {name: Stash branch stash, kind: positional, type: string, required: false}
+        options: [Stash branch name, Stash branch stash]
+
+      - name: clear
+        description: Remove all the stashed states.
+        usage: git stash clear
+        options: []
+
+      - name: create
+        description: Create a stash without storing it.
+        usage: git stash create [<message>]
+        pool:
+          options:
+            - {name: Stash create message, kind: positional, type: string, required: false}
+        options: [Stash create message]
+
+  - name: config
+    description: Get and set repository or global options.
+    usage: git config <subcommand>
+    pool:
+      options:
+        - {name: Config global, kind: flag, type: bool, long: --global}
+        - {name: Config local, kind: flag, type: bool, long: --local}
+        - {name: Config worktree, kind: flag, type: bool, long: --worktree}
+        - {name: Config file, kind: flag, type: string, long: --file, short: "-f"}
+        - {name: Config type, kind: flag, type: enum, long: --type, values: [bool, int, bool-or-int, path, expiry-date, color]}
+        - {name: Config all, kind: flag, type: bool, long: --all}
+        - {name: Config regexp, kind: flag, type: bool, long: --regexp}
+        - {name: Config fixed value, kind: flag, type: bool, long: --fixed-value}
+        - {name: Config default, kind: flag, type: string, long: --default}
+        - {name: Config includes, kind: flag, type: bool, long: --includes}
+        - {name: Config show origin, kind: flag, type: bool, long: --show-origin}
+        - {name: Config show scope, kind: flag, type: bool, long: --show-scope}
+        - {name: Config null, kind: flag, type: bool, long: --null, short: "-z"}
+        - {name: Config name only, kind: flag, type: bool, long: --name-only}
+    subcommands:
+      - name: get
+        description: Emit the value of the given configuration variable.
+        usage: git config get [<options>] <name>
+        pool:
+          options:
+            - {name: Config get name, kind: positional, type: string, required: true}
+        options: [Config global, Config local, Config type, Config all, Config regexp, Config fixed value, Config default, Config includes, Config show origin, Config get name]
+
+      - name: set
+        description: Set the value of a configuration variable.
+        usage: git config set [<options>] <name> <value>
+        pool:
+          options:
+            - {name: Config set name, kind: positional, type: string, required: true}
+            - {name: Config set value, kind: positional, type: string, required: true}
+        options: [Config global, Config local, Config type, Config all, Config fixed value, Config set name, Config set value]
+
+      - name: unset
+        description: Remove the value of a configuration variable.
+        usage: git config unset [<options>] <name>
+        pool:
+          options:
+            - {name: Config unset name, kind: positional, type: string, required: true}
+        options: [Config global, Config local, Config all, Config fixed value, Config unset name]
+
+      - name: list
+        description: List all configuration variables and their values.
+        usage: git config list [<options>]
+        options: [Config global, Config local, Config includes, Config show origin, Config show scope, Config null, Config name only]
+
+      - name: edit
+        description: Open an editor to modify the specified config file.
+        usage: git config edit [<options>]
+        options: [Config global, Config local]
+
+      - name: rename-section
+        description: Rename a section in the config file.
+        usage: git config rename-section <old-name> <new-name>
+        pool:
+          options:
+            - {name: Config old section, kind: positional, type: string, required: true}
+            - {name: Config new section, kind: positional, type: string, required: true}
+        options: [Config global, Config local, Config old section, Config new section]
+
+      - name: remove-section
+        description: Remove a section from the config file.
+        usage: git config remove-section <name>
+        pool:
+          options:
+            - {name: Config section, kind: positional, type: string, required: true}
+        options: [Config global, Config local, Config section]

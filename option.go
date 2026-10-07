@@ -53,10 +53,15 @@ type FlagState struct {
 
 // First returns the first value, or "" when there is none.
 func (s FlagState) First() string {
-	if len(s.Values) == 0 {
+	return firstValue(s.Values)
+}
+
+// firstValue returns the first element of vals, or "" when vals is empty.
+func firstValue(vals []string) string {
+	if len(vals) == 0 {
 		return ""
 	}
-	return s.Values[0]
+	return vals[0]
 }
 
 // Filled reports whether the flag has any value, count, or explicit state.

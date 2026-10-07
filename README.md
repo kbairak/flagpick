@@ -118,8 +118,8 @@ file per command, named after the command (`config/rg.yaml` → `fp rg`).
 `--update` writes to the downloaded dir; a file in the override dir shadows it.
 `make install-config` copies the repo's configs into the override dir.
 
-Bundled configs: [`rg`](config/rg.yaml) (ripgrep) and
-[`direnv`](config/direnv.yaml).
+Bundled configs: [`rg`](config/rg.yaml) (ripgrep),
+[`direnv`](config/direnv.yaml), and [`git`](config/git.yaml).
 
 The config format is documented in full in
 [`config/README.md`](config/README.md). Read that before writing or changing a
@@ -216,14 +216,22 @@ positional.
 Everything is one Go module; the binary lives at the module root.
 
 ```
-main.go        CLI entry point and action handling
+main.go        CLI entry point, argument parsing, and action handling
 config.go      config loading (dirs, decode, manifest-facing)
-node.go        config tree resolution (nodes, pools, paths, validation)
+node.go        config tree resolution (nodes, pools, paths)
+validate.go    config-shape validation (nodes, options, groups)
 option.go      flag/positional types and their assembly
 assemble.go    argv assembly and token prefill
-tui.go         the Bubble Tea TUI
+tui_model.go   TUI model, dispatch, and kitty-keyboard setup
+tui_mode.go    mode/path selection and reconciliation
+tui_keys.go    key handling and run/copy/print actions
+tui_overlays.go overlay state (picker, enum, subcommand)
+tui_rows.go    option list ordering, filtering, and cursor movement
+tui_edit.go    editing, clearing, and flag reordering
+tui_render.go  layout math and the main view
+tui_overlayview.go  full-screen overlay renders (picker, enum, action, ...)
 picker.go      filesystem picker for `path` positionals
-remote.go       --update / manifest fetching
+remote.go      --update / manifest fetching
 state.go       --resume state
 clipboard.go   native clipboard + OSC52 fallback
 cmd/genmanifest/   manifest.json generator
@@ -233,6 +241,15 @@ config/        bundled configs + the config spec (README.md)
 ```sh
 make all   # fmt, test, vet, manifest, install-config, build
 make test
+make lint  # golangci-lint; not part of `make all`
+```
+
+`make lint` needs [golangci-lint](https://golangci-lint.run):
+
+```sh
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+# or
+brew install golangci-lint
 ```
 
 Unit tests cover config parsing/validation, assembly and prefill (golden), the

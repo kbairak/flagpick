@@ -1,6 +1,6 @@
 DEST ?= $(or $(XDG_CONFIG_HOME),$(HOME)/.config)/flagpick
 
-.PHONY: all build test vet fmt install install-config manifest clean
+.PHONY: all build test vet lint fmt install install-config manifest clean
 
 all: fmt test vet manifest install-config build
 
@@ -12,6 +12,9 @@ test:
 
 vet:
 	go vet ./...
+
+lint:
+	golangci-lint run ./...
 
 fmt:
 	gofmt -l -w .

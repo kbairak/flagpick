@@ -15,8 +15,7 @@ import (
 const version = "0.1.0"
 
 func usage(w io.Writer) {
-	fmt.Fprint(w, `flagpick - TUI for building and running complex CLI commands
-
+	_, _ = fmt.Fprint(w, `flagpick - TUI for building and running complex CLI commands
 usage: fp [--fp-flags] <command> [tool-args...]
 
 flags:
@@ -28,59 +27,100 @@ flags:
 `)
 }
 
-func main() {
-	args := os.Args[1:]
-	var cmdName string
-	var toolArgs []string
-	resume := false
+// cliAction is a terminal flagpick action selected on the command line before
+// any wrapped command is considered.
+type cliAction int
+
+const (
+	actionBuild cliAction = iota // wrap a command and open the TUI
+	actionHelp
+	actionVersion
+	actionList
+	actionUpdate
+)
+
+// cliArgs is the result of parsing flagpick's own arguments.
+type cliArgs struct {
+	action   cliAction
+	cmdName  string
+	toolArgs []string
+	resume   bool
+}
+
+// parseArgs scans flagpick's flags up to the first non-flag token, which begins
+// the wrapped command. It performs no I/O; the caller dispatches the action.
+func parseArgs(args []string) (cliArgs, error) {
+	var out cliArgs
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch a {
 		case "--version", "-V":
-			fmt.Println("fp " + version)
-			return
+			out.action = actionVersion
+			return out, nil
 		case "--help", "-h":
-			usage(os.Stdout)
-			return
+			out.action = actionHelp
+			return out, nil
 		case "--list", "-l":
-			list, err := ListCommands()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			for _, n := range list {
-				fmt.Println(n)
-			}
-			return
+			out.action = actionList
+			return out, nil
 		case "--resume", "-r":
-			resume = true
+			out.resume = true
 		case "--update":
-			data, err := dataDir()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			if err := updateConfigs(remoteBaseURL, data); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			return
+			out.action = actionUpdate
+			return out, nil
 		default:
 			if strings.HasPrefix(a, "-") {
-				fmt.Fprintf(os.Stderr, "unknown flag: %s\n", a)
-				usage(os.Stderr)
-				os.Exit(2)
+				return out, fmt.Errorf("unknown flag: %s", a)
 			}
-			cmdName = a
-			toolArgs = args[i+1:]
-			i = len(args)
+			out.cmdName = a
+			out.toolArgs = args[i+1:]
+			return out, nil
 		}
 	}
-	if cmdName == "" {
+	return out, nil
+}
+
+func main() {
+	parsed, err := parseArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		usage(os.Stderr)
 		os.Exit(2)
 	}
-	runCommand(cmdName, toolArgs, resume)
+	switch parsed.action {
+	case actionVersion:
+		fmt.Println("fp " + version)
+		return
+	case actionHelp:
+		usage(os.Stdout)
+		return
+	case actionList:
+		list, err := ListCommands()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		for _, n := range list {
+			fmt.Println(n)
+		}
+		return
+	case actionUpdate:
+		data, err := dataDir()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err := updateConfigs(remoteBaseURL, data); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if parsed.cmdName == "" {
+		usage(os.Stderr)
+		os.Exit(2)
+	}
+	runCommand(parsed.cmdName, parsed.toolArgs, parsed.resume)
 }
 
 func runCommand(cmd string, toolArgs []string, resume bool) {
@@ -108,7 +148,7 @@ func runCommand(cmd string, toolArgs []string, resume bool) {
 	}
 
 	final, err := tea.NewProgram(newModel(cmd, cfg, session), tea.WithAltScreen()).Run()
-	fmt.Fprint(os.Stdout, kittyKeyboardDisable)
+	_, _ = fmt.Fprint(os.Stdout, kittyKeyboardDisable)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -125,10 +165,10 @@ func runCommand(cmd string, toolArgs []string, resume bool) {
 	}
 	switch m.action {
 	case actionPrint:
-		fmt.Fprintln(os.Stdout, ShellQuote(append([]string{cmd}, Assemble(m.res(), m.session)...)))
+		_, _ = fmt.Fprintln(os.Stdout, ShellQuote(append([]string{cmd}, Assemble(m.res(), m.session)...)))
 	case actionRun:
 		argv := append([]string{cmd}, Assemble(m.res(), m.session)...)
-		fmt.Fprintln(os.Stdout, "$ "+ShellQuote(argv))
+		_, _ = fmt.Fprintln(os.Stdout, "$ "+ShellQuote(argv))
 		path, err := exec.LookPath(cmd)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "cannot run %q: %v\n", cmd, err)

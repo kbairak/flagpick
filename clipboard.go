@@ -44,7 +44,7 @@ func osc52(text string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	payload := base64.StdEncoding.EncodeToString([]byte(text))
 	_, err = fmt.Fprintf(f, "\x1b]52;c;%s\x07", payload)
 	return err

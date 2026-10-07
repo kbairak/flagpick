@@ -31,30 +31,6 @@ type Pool struct {
 	Groups  map[string][]string `yaml:"groups"`
 }
 
-func hasKey(n *yaml.Node, key string) bool {
-	if n.Kind != yaml.MappingNode {
-		return false
-	}
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		if n.Content[i].Value == key {
-			return true
-		}
-	}
-	return false
-}
-
-func checkKeys(n *yaml.Node, allowed map[string]bool) error {
-	if n.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		if k := n.Content[i].Value; !allowed[k] {
-			return fmt.Errorf("unknown field %q", k)
-		}
-	}
-	return nil
-}
-
 func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 	if err := checkKeys(value, fieldSet(
 		"pool", "options", "usage", "description", "subcommands",
@@ -137,44 +113,6 @@ func (s *scope) addPool(p Pool) error {
 	return nil
 }
 
-func validateDef(o Option) error {
-	if p, ok := o.(*EnumPositional); ok {
-		if len(p.Allowed()) == 0 {
-			return fmt.Errorf("positional %q: enum requires at least one value", p.OptName())
-		}
-	}
-	f, ok := o.(Flag)
-	if !ok {
-		return nil
-	}
-	if f.Long() == "" {
-		return fmt.Errorf("flag %q is missing a long form", f.OptName())
-	}
-	if e, ok := f.(*EnumFlag); ok && len(e.Allowed()) == 0 {
-		return fmt.Errorf("flag %q: enum requires at least one value", f.OptName())
-	}
-	if neg := f.Negative(); neg != "" {
-		if !strings.HasPrefix(neg, "--") {
-			return fmt.Errorf("flag %q: negative must start with --", f.OptName())
-		}
-		if neg == f.Long() {
-			return fmt.Errorf("flag %q: negative must differ from long", f.OptName())
-		}
-	}
-	if negShort := f.NegativeShort(); negShort != "" {
-		if !strings.HasPrefix(negShort, "-") || strings.HasPrefix(negShort, "--") {
-			return fmt.Errorf("flag %q: negative short must start with a single -", f.OptName())
-		}
-		if negShort == f.Short() {
-			return fmt.Errorf("flag %q: negative short must differ from short", f.OptName())
-		}
-		if f.Negative() == "" {
-			return fmt.Errorf("flag %q: negative short requires a negative form", f.OptName())
-		}
-	}
-	return nil
-}
-
 // expand resolves an ordered list of refs (definitions or groups) against the
 // visible scope, deduplicating by name (first occurrence wins).
 func expand(sc *scope, refs []string, context string) ([]Option, error) {
@@ -237,28 +175,36 @@ func resolve(n *Node, parent *scope) (*RNode, error) {
 	if n.hasModes && n.hasShape {
 		return nil, fmt.Errorf("node %s: cannot define both modes and shape fields", label(n))
 	}
-	r := &RNode{Name: n.Name, Aliases: n.Aliases, Usage: n.Usage, Description: n.Description}
-
 	if n.hasModes {
-		r.IsFork = true
-		seen := map[string]bool{}
-		for _, m := range n.Modes {
-			if m.Name == "" {
-				return nil, fmt.Errorf("mode is missing a name")
-			}
-			if seen[m.Name] {
-				return nil, fmt.Errorf("duplicate mode name %q", m.Name)
-			}
-			seen[m.Name] = true
-			child, err := resolve(m, sc)
-			if err != nil {
-				return nil, err
-			}
-			r.Modes = append(r.Modes, child)
-		}
-		return r, nil
+		return resolveFork(n, sc)
 	}
+	return resolveShape(n, sc)
+}
 
+// resolveFork resolves a node that fans out into modes.
+func resolveFork(n *Node, sc *scope) (*RNode, error) {
+	r := &RNode{Name: n.Name, Aliases: n.Aliases, Usage: n.Usage, Description: n.Description, IsFork: true}
+	seen := map[string]bool{}
+	for _, m := range n.Modes {
+		if m.Name == "" {
+			return nil, fmt.Errorf("mode is missing a name")
+		}
+		if seen[m.Name] {
+			return nil, fmt.Errorf("duplicate mode name %q", m.Name)
+		}
+		seen[m.Name] = true
+		child, err := resolve(m, sc)
+		if err != nil {
+			return nil, err
+		}
+		r.Modes = append(r.Modes, child)
+	}
+	return r, nil
+}
+
+// resolveShape resolves a node that owns its own options and subcommands.
+func resolveShape(n *Node, sc *scope) (*RNode, error) {
+	r := &RNode{Name: n.Name, Aliases: n.Aliases, Usage: n.Usage, Description: n.Description}
 	opts, err := expand(sc, n.Options, label(n))
 	if err != nil {
 		return nil, err
@@ -278,24 +224,8 @@ func resolve(n *Node, parent *scope) (*RNode, error) {
 
 	seen := map[string]bool{}
 	for _, sub := range n.Subcommands {
-		if sub.Name == "" {
-			return nil, fmt.Errorf("subcommand is missing a name")
-		}
-		if strings.HasPrefix(sub.Name, "-") {
-			return nil, fmt.Errorf("subcommand name %q must not start with -", sub.Name)
-		}
-		if seen[sub.Name] {
-			return nil, fmt.Errorf("duplicate subcommand name %q", sub.Name)
-		}
-		seen[sub.Name] = true
-		for _, a := range sub.Aliases {
-			if a == "" || strings.HasPrefix(a, "-") {
-				return nil, fmt.Errorf("subcommand %q: invalid alias %q", sub.Name, a)
-			}
-			if seen[a] {
-				return nil, fmt.Errorf("duplicate subcommand name or alias %q", a)
-			}
-			seen[a] = true
+		if err := validateSubcommandName(sub, seen); err != nil {
+			return nil, err
 		}
 		child, err := resolve(sub, sc)
 		if err != nil {
@@ -306,30 +236,36 @@ func resolve(n *Node, parent *scope) (*RNode, error) {
 	return r, nil
 }
 
+// validateSubcommandName checks one subcommand's name and aliases against those
+// already seen, recording them.
+func validateSubcommandName(sub *Node, seen map[string]bool) error {
+	if sub.Name == "" {
+		return fmt.Errorf("subcommand is missing a name")
+	}
+	if strings.HasPrefix(sub.Name, "-") {
+		return fmt.Errorf("subcommand name %q must not start with -", sub.Name)
+	}
+	if seen[sub.Name] {
+		return fmt.Errorf("duplicate subcommand name %q", sub.Name)
+	}
+	seen[sub.Name] = true
+	for _, a := range sub.Aliases {
+		if a == "" || strings.HasPrefix(a, "-") {
+			return fmt.Errorf("subcommand %q: invalid alias %q", sub.Name, a)
+		}
+		if seen[a] {
+			return fmt.Errorf("duplicate subcommand name or alias %q", a)
+		}
+		seen[a] = true
+	}
+	return nil
+}
+
 func label(n *Node) string {
 	if n.Name != "" {
 		return fmt.Sprintf("%q", n.Name)
 	}
 	return "root"
-}
-
-// validateShape enforces positional ordering: at most one variadic positional,
-// and it must be last; a passthrough is always variadic and must be last.
-func validateShape(r *RNode) error {
-	seenVariadic := false
-	for _, p := range r.Positionals {
-		if p.Variadic() {
-			if seenVariadic {
-				return fmt.Errorf("only one variadic positional is allowed")
-			}
-			seenVariadic = true
-			continue
-		}
-		if seenVariadic {
-			return fmt.Errorf("positional %q must not follow a variadic positional", p.OptName())
-		}
-	}
-	return nil
 }
 
 // Segment is one shape in a resolved path, plus the subcommand chosen after it.
@@ -401,6 +337,15 @@ func newResolved(name string, segs []Segment, choices []BranchChoice) Resolved {
 		flagSet:       map[string]bool{},
 		posSet:        map[string]bool{},
 	}
+	mergeSegments(&r, segs)
+	r.Options = append(addSubcommandPseudoOptions(choices), r.Options...)
+	deriveUsageDescription(&r, segs)
+	return r
+}
+
+// mergeSegments unions the segments' flag/positional sets and options into r,
+// first occurrence of an option winning.
+func mergeSegments(r *Resolved, segs []Segment) {
 	seenOpt := map[string]bool{}
 	for _, seg := range segs {
 		for n := range seg.flagSet {
@@ -423,8 +368,12 @@ func newResolved(name string, segs []Segment, choices []BranchChoice) Resolved {
 			}
 		}
 	}
-	// Expose each subcommand branch as a selectable pseudo option, outermost
-	// first. Modes are cycled with tab and are not listed here.
+}
+
+// addSubcommandPseudoOptions exposes each subcommand branch as a selectable
+// pseudo option, outermost first. Modes are cycled with tab and are not listed
+// here.
+func addSubcommandPseudoOptions(choices []BranchChoice) []Option {
 	subCount := 0
 	for _, c := range choices {
 		if c.Kind == BranchSubcommand {
@@ -448,7 +397,12 @@ func newResolved(name string, segs []Segment, choices []BranchChoice) Resolved {
 			Label:      c.Label,
 		})
 	}
-	r.Options = append(pseudo, r.Options...)
+	return pseudo
+}
+
+// deriveUsageDescription fills r's usage and description from the innermost
+// segment that provides one, searching deepest first.
+func deriveUsageDescription(r *Resolved, segs []Segment) {
 	for i := len(segs) - 1; i >= 0; i-- {
 		if r.Usage == "" {
 			r.Usage = segs[i].Node.Usage
@@ -457,7 +411,6 @@ func newResolved(name string, segs []Segment, choices []BranchChoice) Resolved {
 			r.Description = segs[i].Node.Description
 		}
 	}
-	return r
 }
 
 func joinName(prefix, name string) string {
@@ -472,39 +425,61 @@ func joinName(prefix, name string) string {
 
 // buildPaths enumerates every complete selection (leaf) through the tree.
 func (cfg *CommandConfig) buildPaths() error {
-	var out []Resolved
-	var walk func(n *RNode, name string, segs []Segment, choices []BranchChoice)
-	walk = func(n *RNode, name string, segs []Segment, choices []BranchChoice) {
-		if n.IsFork {
-			prefix := joinName(name, n.Name)
-			for i, m := range n.Modes {
-				c := append(append([]BranchChoice(nil), choices...), BranchChoice{BranchMode, m.Name, m.Description, i})
-				walk(m, prefix, segs, c)
-			}
-			return
-		}
-		seg := Segment{Node: n, Flags: n.Flags, Positionals: n.Positionals, Options: n.Options}
-		seg.index()
-		base := append([]Segment(nil), segs...)
-		base = append(base, seg)
-		childName := joinName(name, n.Name)
-		if len(n.Subcommands) == 0 {
-			out = append(out, newResolved(childName, base, choices))
-			return
-		}
-		for i, sub := range n.Subcommands {
-			path := append([]Segment(nil), base...)
-			path[len(path)-1].Sub = sub
-			c := append(append([]BranchChoice(nil), choices...), BranchChoice{BranchSubcommand, sub.Name, sub.Description, i})
-			walk(sub, childName, path, c)
-		}
-	}
-	walk(cfg.root, "", nil, nil)
-	if len(out) == 0 {
+	b := &pathBuilder{}
+	b.walk(cfg.root, "", nil, nil)
+	if len(b.out) == 0 {
 		return fmt.Errorf("config has no selectable shape")
 	}
-	cfg.paths = out
+	cfg.paths = b.out
 	return nil
+}
+
+// pathBuilder accumulates the resolved leaves while walking the tree.
+type pathBuilder struct {
+	out []Resolved
+}
+
+// walk descends one node, dispatching on whether it is a fork or a shape.
+func (b *pathBuilder) walk(n *RNode, name string, segs []Segment, choices []BranchChoice) {
+	if n.IsFork {
+		b.walkFork(n, name, segs, choices)
+		return
+	}
+	b.walkShape(n, name, segs, choices)
+}
+
+// walkFork visits each mode as an alternative continuation of the path.
+func (b *pathBuilder) walkFork(n *RNode, name string, segs []Segment, choices []BranchChoice) {
+	prefix := joinName(name, n.Name)
+	for i, m := range n.Modes {
+		c := append(append([]BranchChoice(nil), choices...), BranchChoice{BranchMode, m.Name, m.Description, i})
+		b.walk(m, prefix, segs, c)
+	}
+}
+
+// walkShape appends the shape's segment, then either emits a leaf or descends
+// into each subcommand.
+func (b *pathBuilder) walkShape(n *RNode, name string, segs []Segment, choices []BranchChoice) {
+	seg := Segment{Node: n, Flags: n.Flags, Positionals: n.Positionals, Options: n.Options}
+	seg.index()
+	base := append([]Segment(nil), segs...)
+	base = append(base, seg)
+	childName := joinName(name, n.Name)
+	if len(n.Subcommands) == 0 {
+		b.out = append(b.out, newResolved(childName, base, choices))
+		return
+	}
+	for i, sub := range n.Subcommands {
+		b.descendSubcommand(sub, i, childName, base, choices)
+	}
+}
+
+// descendSubcommand records the chosen verb on the last segment and recurses.
+func (b *pathBuilder) descendSubcommand(sub *RNode, i int, childName string, base []Segment, choices []BranchChoice) {
+	path := append([]Segment(nil), base...)
+	path[len(path)-1].Sub = sub
+	c := append(append([]BranchChoice(nil), choices...), BranchChoice{BranchSubcommand, sub.Name, sub.Description, i})
+	b.walk(sub, childName, path, c)
 }
 
 // HasBranchKind reports whether the path branches on the given kind.
@@ -574,6 +549,14 @@ func (cfg *CommandConfig) flatten() {
 		}
 	}
 	walk(cfg.root)
+	cfg.flagsByName = make(map[string]Flag, len(cfg.Flags))
+	for _, f := range cfg.Flags {
+		cfg.flagsByName[f.OptName()] = f
+	}
+	cfg.positionalsByName = make(map[string]Positional, len(cfg.Positionals))
+	for _, p := range cfg.Positionals {
+		cfg.positionalsByName[p.OptName()] = p
+	}
 }
 
 // Resolved returns the config's selectable paths.

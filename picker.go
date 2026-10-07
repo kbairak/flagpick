@@ -147,8 +147,7 @@ func (p *picker) backspace() bool {
 	if p.filter == "" {
 		return false
 	}
-	r := []rune(p.filter)
-	p.filter = string(r[:len(r)-1])
+	p.filter = trimLastRune(p.filter)
 	p.cursor = 0
 	return true
 }

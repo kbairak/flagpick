@@ -34,7 +34,9 @@ func TestPickerBrowseAndFilter(t *testing.T) {
 	}
 
 	// Backspace empties the filter again.
-	if !p.backspace() || !p.backspace() {
+	b1 := p.backspace()
+	b2 := p.backspace()
+	if !b1 || !b2 {
 		t.Fatal("backspace did not consume both runes")
 	}
 	if p.filter != "" || p.backspace() {
@@ -67,7 +69,7 @@ func TestPickerBrowseAndFilter(t *testing.T) {
 func TestPickerRenderFits(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"a", "b", "c"} {
-		os.WriteFile(filepath.Join(dir, name), nil, 0o644)
+		_ = os.WriteFile(filepath.Join(dir, name), nil, 0o644)
 	}
 	p := newPicker(dir)
 	for _, w := range []int{30, 50, 80} {

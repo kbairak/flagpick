@@ -18,6 +18,22 @@ type CommandConfig struct {
 
 	root  *RNode
 	paths []Resolved
+
+	// Lookup indexes over Flags/Positionals, built once in flatten.
+	flagsByName       map[string]Flag
+	positionalsByName map[string]Positional
+}
+
+// flag returns the flag with the given name, if any.
+func (cfg *CommandConfig) flag(name string) (Flag, bool) {
+	f, ok := cfg.flagsByName[name]
+	return f, ok
+}
+
+// positional returns the positional with the given name, if any.
+func (cfg *CommandConfig) positional(name string) (Positional, bool) {
+	p, ok := cfg.positionalsByName[name]
+	return p, ok
 }
 
 // OptionsList is the ordered catalog of flags and positionals. Order is the
@@ -126,28 +142,6 @@ func decodePositional(node *yaml.Node) (Positional, error) {
 		return nil, err
 	}
 	return p, nil
-}
-
-// decodeStrict rejects keys outside `allowed`, then decodes normally.
-func decodeStrict(node *yaml.Node, dst any, allowed map[string]bool) error {
-	var raw map[string]yaml.Node
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	for k := range raw {
-		if !allowed[k] {
-			return fmt.Errorf("unknown field %q", k)
-		}
-	}
-	return node.Decode(dst)
-}
-
-func fieldSet(names ...string) map[string]bool {
-	m := make(map[string]bool, len(names))
-	for _, n := range names {
-		m[n] = true
-	}
-	return m
 }
 
 // xdgDir resolves a per-app directory from an XDG env var. When the variable
