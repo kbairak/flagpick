@@ -2,7 +2,19 @@ package main
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
+
+// addOption adds the option named name from the empty-option slot: it focuses
+// the slot, filters to name, selects the first match, and presses enter.
+func addOption(m model, name string) model {
+	m.focusEmptySlot()
+	m.filter = name
+	m.syncFilterCursor()
+	upd, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	return upd.(model)
+}
 
 const tuiFixture = `pool:
   options:
@@ -102,19 +114,6 @@ func testValueModel(t *testing.T) model {
 		t.Fatalf("prefill: %v", err)
 	}
 	return newModel("rg", cfg, sess)
-}
-
-// variadicRows returns the rows of the PATH positional (filtered to PATH).
-func variadicRows(t *testing.T, m model) []row {
-	t.Helper()
-	m.filter = "PATH"
-	var out []row
-	for _, r := range m.rows() {
-		if r.opt != nil && r.opt.OptName() == "PATH" {
-			out = append(out, r)
-		}
-	}
-	return out
 }
 
 const modesFixture = `pool:

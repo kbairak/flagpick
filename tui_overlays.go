@@ -1,4 +1,4 @@
-// This file holds the state of the picker, enum, and subcommand overlays.
+// This file holds the state of the picker and enum overlays.
 package main
 
 import (
@@ -108,6 +108,7 @@ func (m *model) commitEnum(val string) {
 		return
 	}
 	state := m.session.Flags[m.enum.name]
+	was := m.flagEnabled(m.enum.name)
 	if m.enum.index < 0 {
 		if m.isRepeatableFlag(m.enum.name) {
 			state.Values = append(state.Values, val)
@@ -118,55 +119,7 @@ func (m *model) commitEnum(val string) {
 		state.Values[m.enum.index] = val
 	}
 	m.session.Flags[m.enum.name] = state
-}
-
-// openSub opens the subcommand menu for the branch at level. Sibling leaves
-// are collapsed to one entry per distinct choice at that level, so a
-// subcommand that is itself a dispatcher appears once and nests.
-func (m *model) openSub(level int) {
-	idx := m.cfg.SiblingIndices(m.res(), level)
-	if len(idx) == 0 {
-		return
+	if !was && m.flagEnabled(m.enum.name) {
+		m.appendFlagOrder(m.enum.name)
 	}
-	cur := m.res().BranchChoices[level].Index
-	seen := map[int]bool{}
-	var reps []int
-	for _, pi := range idx {
-		ci := m.modes[pi].BranchChoices[level].Index
-		if seen[ci] {
-			continue
-		}
-		seen[ci] = true
-		reps = append(reps, pi)
-	}
-	m.screen = screenSub
-	m.sub.level = level
-	m.sub.paths = reps
-	m.sub.filter = ""
-	m.sub.sel = 0
-	for i, pi := range reps {
-		if m.modes[pi].BranchChoices[level].Index == cur {
-			m.sub.sel = i
-			break
-		}
-	}
-}
-
-// subLabel returns the label of the choice made at m.sub.level on a path.
-func (m model) subLabel(pi int) string {
-	if m.sub.level < len(m.modes[pi].BranchChoices) {
-		return m.modes[pi].BranchChoices[m.sub.level].Label
-	}
-	return m.modes[pi].Name
-}
-
-// filteredSub returns the sibling path indices matching the current filter.
-func (m model) filteredSub() []int {
-	var out []int
-	for _, pi := range m.sub.paths {
-		if fuzzyMatch(m.subLabel(pi), m.sub.filter) {
-			out = append(out, pi)
-		}
-	}
-	return out
 }

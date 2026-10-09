@@ -1,0 +1,63 @@
+description: A TUI for building and running complex CLI commands.
+
+pool:
+  options:
+    - name: COMMAND
+      kind: positional
+      type: enum
+      required: true
+      values: [rg, direnv, git, fp]
+      description: >
+        The command to wrap; must have a config.
+    - name: ARGS
+      kind: positional
+      type: passthrough
+      required: false
+      description: >
+        Arguments prefilled into the wrapped command's TUI.
+    - name: Update
+      kind: flag
+      type: bool
+      long: --update
+      conflicts: [List, Help, Version]
+      description: >
+        Download or refresh configs from the remote manifest, then exit.
+    - name: List
+      kind: flag
+      type: bool
+      long: --list
+      short: "-l"
+      conflicts: [Update, Help, Version]
+      description: >
+        List the known commands, then exit.
+    - name: Resume
+      kind: flag
+      type: bool
+      long: --resume
+      short: "-r"
+      description: >
+        Prefill with the last composition for the command.
+    - name: Help
+      kind: flag
+      type: bool
+      long: --help
+      short: "-h"
+      conflicts: [Update, List, Version]
+      description: >
+        Print usage, then exit.
+    - name: Version
+      kind: flag
+      type: bool
+      long: --version
+      short: "-V"
+      conflicts: [Update, List, Help]
+      description: >
+        Print the version, then exit.
+
+modes:
+  - name: Build
+    usage: fp [flags] <command> [tool-args...]
+    options: [Resume, COMMAND, ARGS]
+  - name: Info
+    usage: fp -h | -V | -l | --update
+    options: [Update, List, Help, Version]

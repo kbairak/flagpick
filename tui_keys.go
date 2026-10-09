@@ -17,8 +17,9 @@ var ctrlCSIKeys = map[rune]tea.KeyType{
 	'd': tea.KeyCtrlD,
 	'h': tea.KeyCtrlH,
 	'n': tea.KeyCtrlN,
+	'o': tea.KeyCtrlO,
 	'p': tea.KeyCtrlP,
-	'r': tea.KeyCtrlR,
+	's': tea.KeyCtrlS,
 	'u': tea.KeyCtrlU,
 	'w': tea.KeyCtrlW,
 	'x': tea.KeyCtrlX,
@@ -26,7 +27,7 @@ var ctrlCSIKeys = map[rune]tea.KeyType{
 }
 
 // handleCSIKey decodes a CSI-u key event (kitty keyboard protocol), which is
-// how modified keys like ctrl+shift+j/k arrive. It reports whether the event
+// how modified keys like ctrl+shift+h/l arrive. It reports whether the event
 // was recognized.
 func (m *model) handleCSIKey(msg tea.Msg) (tea.Cmd, bool) {
 	rv := reflect.ValueOf(msg)
@@ -47,6 +48,7 @@ func (m *model) handleCSIKey(msg tea.Msg) (tea.Cmd, bool) {
 		mods, _ = strconv.Atoi(parts[1])
 	}
 	bits := mods - 1
+	shift := bits&1 != 0
 	// Ambiguous special keys also come through as CSI-u.
 	switch cp {
 	case 27:
@@ -54,6 +56,9 @@ func (m *model) handleCSIKey(msg tea.Msg) (tea.Cmd, bool) {
 	case 13:
 		return m.dispatchKey(tea.KeyEnter)
 	case 9:
+		if shift {
+			return m.dispatchKey(tea.KeyShiftTab)
+		}
 		return m.dispatchKey(tea.KeyTab)
 	case 127:
 		return m.dispatchKey(tea.KeyBackspace)
@@ -61,25 +66,30 @@ func (m *model) handleCSIKey(msg tea.Msg) (tea.Cmd, bool) {
 	if bits&4 == 0 { // require ctrl
 		return nil, false
 	}
-	shift := bits&1 != 0
 	if bits&2 != 0 { // alt/modified beyond ctrl(+shift): ignore
 		return nil, false
 	}
 	switch cp {
-	case 'k', 'K':
+	case 'h', 'H':
 		if shift {
 			m.reorder(-1)
-		} else {
-			m.moveCursor(-1)
+			return nil, true
 		}
-		return nil, true
-	case 'j', 'J':
+	case 'l', 'L':
 		if shift {
 			m.reorder(1)
-		} else {
-			m.moveCursor(1)
+			return nil, true
 		}
-		return nil, true
+	case 'j', 'J':
+		if !shift {
+			m.moveCursor(1)
+			return nil, true
+		}
+	case 'k', 'K':
+		if !shift {
+			m.moveCursor(-1)
+			return nil, true
+		}
 	case 'x', 'X':
 		if shift {
 			m.clearAll()
@@ -127,8 +137,11 @@ func (m model) handlePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "enter":
 		if path, ok := m.picker.selectedPath(); ok {
+			name := m.pick.name
 			m.commitPath(path)
 			m.screen = screenMain
+			m.resetFilter()
+			m.focusAfterActivate(name)
 		}
 		return m, nil
 	case "right", "l":
@@ -169,8 +182,6 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case screenConfirm:
 		return m.handleConfirmKey(msg)
-	case screenAction:
-		return m.handleActionKey(msg)
 	case screenEnum:
 		return m.handleEnumKey(msg)
 	case screenSub:
@@ -180,14 +191,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.editing {
 		switch key {
 		case "enter":
+			name := m.editingName
 			m.commitEdit()
 			m.editing = false
 			m.input.Blur()
-			if m.editingIndex < 0 && m.isVariadic(m.editingName) {
-				m.setCursor(m.rowIndexOfKind(m.editingName, rowAdd))
-			} else {
-				m.setCursor(m.rowIndexOf(m.editingName) + 1)
-			}
+			m.resetFilter()
+			m.focusAfterActivate(name)
 			return m, nil
 		case "esc":
 			m.editing = false
@@ -244,58 +253,105 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgup":
 		m.descScroll -= m.pageSize()
 		return m, nil
-	// Reorder. ctrl-shift-j/k is preferred; terminals that don't emit a
-	// distinct sequence for it fall back to ctrl+up/down.
-	case "ctrl+shift+k", "ctrl+up":
+	// Reorder the focused filled flag. ctrl-shift-h/l arrives as CSI-u.
+	case "ctrl+shift+h":
 		m.reorder(-1)
 		return m, nil
-	case "ctrl+shift+j", "ctrl+down":
+	case "ctrl+shift+l":
 		m.reorder(1)
 		return m, nil
-	case "enter":
-		m.screen = screenAction
-		m.actions.sel = 0
+	case "tab":
+		m.moveFocus(1)
 		return m, nil
-	case " ":
-		return m, m.activate()
-	case "ctrl+r":
+	case "shift+tab":
+		m.moveFocus(-1)
+		return m, nil
+	case "enter":
+		return m, m.enterFocused()
+	case "ctrl+s":
 		return m, m.runCommand()
 	case "ctrl+y":
 		return m, m.copyCommand(false)
 	case "ctrl+shift+y":
 		return m, m.copyCommand(true)
+	case "ctrl+n":
+		m.cycleMode(1)
+		return m, nil
 	case "ctrl+p":
+		m.cycleMode(-1)
+		return m, nil
+	case "ctrl+o":
 		return m, m.printCommand()
 	case "ctrl+?", "ctrl+/":
 		m.screen = screenHelp
 		return m, nil
-	case "tab":
-		m.cycleMode(1)
-		return m, nil
-	case "shift+tab":
-		m.cycleMode(-1)
-		return m, nil
 	case "backspace", "ctrl+h":
+		if t, ok := m.focusedToken(); ok && t.kind == pvEmitted && t.name != "" {
+			m.removeFocusedToken()
+			return m, nil
+		}
 		if m.filter != "" {
 			m.filter = trimLastRune(m.filter)
-			m.cursor = 0
 			m.descScroll = 0
+			m.syncFilterCursor()
 		}
 		return m, nil
 	case "ctrl+w":
 		m.filter = trimLastWord(m.filter)
-		m.cursor = 0
 		m.descScroll = 0
+		m.syncFilterCursor()
 		return m, nil
 	}
 
 	if msg.Type == tea.KeyRunes {
 		m.filter += string(msg.Runes)
-		m.cursor = 0
 		m.descScroll = 0
+		m.syncFilterCursor()
 		return m, nil
 	}
 	return m, nil
+}
+
+// enterFocused activates the focused preview token. On the empty-option slot
+// it activates the Options-list selection, or, when nothing is selected, moves
+// to and activates the first positional.
+func (m *model) enterFocused() tea.Cmd {
+	t, ok := m.focusedToken()
+	if !ok {
+		return nil
+	}
+	switch t.kind {
+	case pvSub, pvVerb:
+		return m.openSubAt(t.subLevel)
+	case pvEmpty:
+		if r, ok := m.selectedRow(); ok && r.opt != nil {
+			return m.activateOption(r.opt.OptName())
+		}
+		if m.focusFirstPositional() {
+			if ft, ok := m.focusedToken(); ok {
+				return m.activateToken(ft)
+			}
+		}
+		if m.pendingSub() {
+			return m.openSub()
+		}
+		return nil
+	}
+	return m.activateToken(t)
+}
+
+// syncFilterCursor selects the first matching option while the empty-option
+// slot is focused, so Enter adds it; with no filter or no match the selection
+// is cleared.
+func (m *model) syncFilterCursor() {
+	if t, ok := m.focusedToken(); !ok || t.kind != pvEmpty {
+		return
+	}
+	if m.filter == "" || len(m.filtered()) == 0 {
+		m.cursor = -1
+		return
+	}
+	m.cursor = 0
 }
 
 // runCommand validates and quits to exec the command.
@@ -364,8 +420,10 @@ func (m model) handleEnumKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if f := m.filteredEnum(); m.enum.sel < len(f) {
 			m.commitEnum(f[m.enum.sel])
 		}
+		name := m.enum.name
 		m.screen = screenMain
-		m.setCursor(m.rowIndexOf(m.enum.name))
+		m.resetFilter()
+		m.focusAfterActivate(name)
 		return m, nil
 	case "ctrl+c":
 		m.action = actionNone
@@ -378,112 +436,6 @@ func (m model) handleEnumKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeySpace {
 		m.enum.filter += " "
 		m.enum.sel = 0
-	}
-	return m, nil
-}
-
-// handleSubKey drives the subcommand menu (up/down choose, enter selects, esc
-// cancels). Printable runes fuzzy-filter the subcommands. Choosing one
-// switches the active path and keeps the state the new path still accepts.
-func (m model) handleSubKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
-		m.screen = screenMain
-		return m, nil
-	case "up", "ctrl+k":
-		if m.sub.sel > 0 {
-			m.sub.sel--
-		}
-		return m, nil
-	case "down", "ctrl+j":
-		if m.sub.sel < len(m.filteredSub())-1 {
-			m.sub.sel++
-		}
-		return m, nil
-	case "backspace", "ctrl+h":
-		m.sub.filter = trimLastRune(m.sub.filter)
-		m.sub.sel = 0
-		return m, nil
-	case "ctrl+w":
-		m.sub.filter = trimLastWord(m.sub.filter)
-		m.sub.sel = 0
-		return m, nil
-	case "enter":
-		if f := m.filteredSub(); m.sub.sel < len(f) {
-			m.mode = f[m.sub.sel]
-		}
-		m.screen = screenMain
-		m.reconcileMode()
-		m.filter = ""
-		m.cursor = 0
-		m.descScroll = 0
-		return m, nil
-	case "ctrl+c":
-		m.action = actionNone
-		return m, tea.Quit
-	}
-	if msg.Type == tea.KeyRunes {
-		m.sub.filter += string(msg.Runes)
-		m.sub.sel = 0
-	}
-	if msg.Type == tea.KeySpace {
-		m.sub.filter += " "
-		m.sub.sel = 0
-	}
-	return m, nil
-}
-
-// handleActionKey drives the run/copy/print/cancel popup.
-func (m model) handleActionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
-		m.screen = screenMain
-		return m, nil
-	case "up", "ctrl+k", "k":
-		if m.actions.sel > 0 {
-			m.actions.sel--
-		}
-		return m, nil
-	case "down", "ctrl+j", "ctrl+n", "j":
-		if m.actions.sel < 4 {
-			m.actions.sel++
-		}
-		return m, nil
-	case "enter":
-		switch m.actions.sel {
-		case 0:
-			cmd := m.runCommand()
-			if cmd == nil {
-				m.screen = screenMain
-			}
-			return m, cmd
-		case 1:
-			return m, m.copyExit()
-		case 2:
-			return m, m.copyStay()
-		case 3:
-			cmd := m.printCommand()
-			if cmd == nil {
-				m.screen = screenMain
-			}
-			return m, cmd
-		default:
-			m.screen = screenMain
-			return m, nil
-		}
-	case "ctrl+r":
-		m.screen = screenMain
-		return m, m.runCommand()
-	case "ctrl+y":
-		return m, m.copyExit()
-	case "ctrl+shift+y":
-		return m, m.copyStay()
-	case "ctrl+p":
-		m.screen = screenMain
-		return m, m.printCommand()
-	case "ctrl+c":
-		m.action = actionNone
-		return m, tea.Quit
 	}
 	return m, nil
 }

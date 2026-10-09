@@ -1,5 +1,4 @@
-// This file renders the full-screen overlays (picker, enum, subcommand, action,
-// confirm, help).
+// This file renders the full-screen overlays (picker, enum, confirm, help).
 package main
 
 import (
@@ -7,43 +6,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 )
-
-// subView renders the subcommand menu.
-func (m model) subView() string {
-	cw := m.contentWidth()
-	inner := cw - 6
-	if inner < 10 {
-		inner = 10
-	}
-	normal := buttonStyle
-	selected := buttonSelectedStyle
-
-	lines := []string{titleStyle.Render(truncate("Select subcommand", inner)), ""}
-	subs := m.filteredSub()
-	if len(subs) == 0 {
-		lines = append(lines, dimStyle.Render("(no match)"))
-	}
-	for i, pi := range subs {
-		pc := m.modes[pi].BranchChoices[m.sub.level]
-		label := pc.Label
-		if d := strings.TrimSpace(pc.Description); d != "" {
-			label += " — " + d
-		}
-		label = truncate(label, inner-2)
-		if i == m.sub.sel {
-			lines = append(lines, selected.Render(label))
-		} else {
-			lines = append(lines, normal.Render(label))
-		}
-	}
-	filterLine := truncate("filter: "+m.sub.filter+"▏", inner)
-	lines = append(lines, "", filterLine, dimStyle.Render(truncate(popupFilterHint, inner)))
-	if maxBody := m.height - 4; maxBody > 0 && len(lines) > maxBody {
-		lines = lines[:maxBody]
-	}
-	box := boxBorder.Padding(1, 2).Render(strings.Join(lines, "\n"))
-	return lipgloss.Place(cw, m.height, lipgloss.Center, lipgloss.Center, box)
-}
 
 // pickerView renders the filesystem picker as a full-screen overlay.
 func (m model) pickerView() string {
@@ -75,43 +37,6 @@ func (m model) enumView() string {
 	}
 	filterLine := truncate("filter: "+m.enum.filter+"▏", inner)
 	lines = append(lines, "", filterLine, dimStyle.Render(truncate(popupFilterHint, inner)))
-	if maxBody := m.height - 4; maxBody > 0 && len(lines) > maxBody {
-		lines = lines[:maxBody]
-	}
-	box := boxBorder.Padding(1, 2).Render(strings.Join(lines, "\n"))
-	return lipgloss.Place(cw, m.height, lipgloss.Center, lipgloss.Center, box)
-}
-
-// actionView renders the vertical action popup: run, copy, print, cancel.
-func (m model) actionView() string {
-	cw := m.contentWidth()
-	inner := cw - 6
-	if inner < 10 {
-		inner = 10
-	}
-
-	normal := buttonStyle
-	selected := buttonSelectedStyle
-
-	labels := []string{"Run", "Copy and exit", "Copy and stay", "Print composed command", "Cancel"}
-	buttons := make([]string, len(labels))
-	for i, l := range labels {
-		plain := truncate(l, inner-2)
-		if i == m.actions.sel {
-			buttons[i] = selected.Render(plain)
-		} else {
-			buttons[i] = normal.Render(plain)
-		}
-	}
-
-	lines := []string{
-		titleStyle.Render(truncate("Command", inner)),
-		"",
-		truncate("$ "+m.preview(), inner),
-		"",
-	}
-	lines = append(lines, buttons...)
-	lines = append(lines, "", dimStyle.Render(truncate("enter confirm · up/down or j/k choose · esc cancel", inner)))
 	if maxBody := m.height - 4; maxBody > 0 && len(lines) > maxBody {
 		lines = lines[:maxBody]
 	}
@@ -159,28 +84,24 @@ func (m model) helpView() string {
 	body := strings.Join([]string{
 		titleStyle.Render("flagpick keymap"),
 		"",
+		"tab / shift-tab move focus between preview tokens",
+		"enter           edit / activate the focused token",
 		"any printable   fuzzy-filter options",
-		"backspace       delete last filter char",
+		"backspace       delete focused token / filter char",
 		"ctrl-w          delete last filter word",
-		"ctrl-j / ctrl-k cycle selection",
-		"up / down       cycle selection (alt)",
+		"ctrl-j / ctrl-k move the option list selection",
+		"up / down       move the option list selection (alt)",
 		"ctrl-d / ctrl-u half-page down / up",
 		"pgup / pgdown   scroll description",
-		"space           toggle flag / edit value / add value",
-		"space on path   open the file/dir picker",
-		"space on enum   choose value from a menu",
-		"space on command choose the subcommand",
-		"space on count  cycle repeats (0-3)",
-		"enter           open command menu (run/copy/print/cancel)",
-		"ctrl-x          clear selected entry (uncheck/empty)",
+		"ctrl-x          clear focused token / selected entry",
 		"ctrl-shift-x    clear all options",
-		"ctrl-shift-j/k  reorder selected flag (or ctrl-up/down)",
-		"tab / shift-tab switch mode",
-		"ctrl-r          run (exec)",
+		"ctrl-shift-h/l  reorder the focused flag",
+		"ctrl-n / ctrl-p  next / previous mode",
+		"ctrl-s          run (exec)",
 		"ctrl-y          copy to clipboard and exit",
 		"ctrl-shift-y    copy to clipboard and stay",
-		"ctrl-p          print after exit",
-		"esc             open quit confirm · esc cancel · esc clear filter",
+		"ctrl-o          print after exit",
+		"esc             abort edit / clear filter / quit confirm",
 		"ctrl-c          quit immediately",
 		"ctrl-?          toggle this help",
 		"",

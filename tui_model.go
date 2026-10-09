@@ -46,7 +46,6 @@ const (
 	screenPicker
 	screenEnum
 	screenSub
-	screenAction
 	screenConfirm
 	screenHelp
 )
@@ -62,15 +61,17 @@ type enumMenu struct {
 
 // subMenu is the state of the subcommand menu.
 type subMenu struct {
-	level  int
-	paths  []int
-	sel    int
-	filter string
+	entries []subEntry
+	sel     int
+	filter  string
+	depth   int // subcommand depth being selected
 }
 
-// actionPopup is the state of the run/copy/print/cancel popup.
-type actionPopup struct {
-	sel int
+// subEntry is one selectable subcommand in the menu.
+type subEntry struct {
+	name  string
+	desc  string
+	index int // index into the node's Subcommands
 }
 
 // confirmPrompt is the state of the quit-confirmation popup.
@@ -90,6 +91,7 @@ type model struct {
 	session *Session
 	filter  string
 	cursor  int
+	focus   int
 
 	editing      bool
 	editingName  string
@@ -102,7 +104,6 @@ type model struct {
 	pick    pickerState
 	enum    enumMenu
 	sub     subMenu
-	actions actionPopup
 	confirm confirmPrompt
 
 	errMsg     string
@@ -111,6 +112,7 @@ type model struct {
 	descScroll int
 	modes      []Resolved
 	mode       int
+	subDepth   int
 	width      int
 	height     int
 }
@@ -127,26 +129,40 @@ func newModel(cmd string, cfg *CommandConfig, session *Session) model {
 	}
 
 	modes := cfg.Resolved()
-	return model{
-		cmd:     cmd,
-		cfg:     cfg,
-		session: session,
-		input:   in,
-		picker:  newPicker(dir),
-		modes:   modes,
-		mode:    detectMode(modes, session),
+	mode := detectMode(modes, session)
+	subDepth := 0
+	if len(modes) > 0 {
+		if session.path >= 0 && session.path < len(modes) {
+			mode = session.path
+			subDepth = countSubs(modes[mode])
+		} else if !sessionEmpty(session) {
+			subDepth = countSubs(modes[mode])
+		}
 	}
+	m := model{
+		cmd:      cmd,
+		cfg:      cfg,
+		session:  session,
+		input:    in,
+		picker:   newPicker(dir),
+		modes:    modes,
+		mode:     mode,
+		subDepth: subDepth,
+	}
+	m.focusEmptySlot()
+	return m
 }
 
-// res returns the active mode.
+// res returns the active path, truncated to the chosen subcommand depth.
 func (m model) res() Resolved {
 	if len(m.modes) == 0 {
 		return Resolved{}
 	}
-	if m.mode < 0 || m.mode >= len(m.modes) {
-		return m.modes[0]
+	idx := m.mode
+	if idx < 0 || idx >= len(m.modes) {
+		idx = 0
 	}
-	return m.modes[m.mode]
+	return prefixResolved(m.modes[idx], m.subDepth)
 }
 
 // kittyKeyboardEnable turns on the kitty keyboard protocol so the terminal

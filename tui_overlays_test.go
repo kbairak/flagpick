@@ -12,8 +12,10 @@ import (
 // that a selection is appended, and that esc cancels.
 func TestPathPickerOpenSelectEsc(t *testing.T) {
 	m := testPathModel(t)
+	m.setCursor(m.rowIndexOf("PATH"))
+	m.focusEmptySlot()
 
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
+	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
 	m = opened.(model)
 	if m.screen != screenPicker {
 		t.Fatal("path positional did not open the picker")
@@ -26,10 +28,11 @@ func TestPathPickerOpenSelectEsc(t *testing.T) {
 	}
 
 	// Reopen and commit a selection directly.
-	opened, _ = m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
+	opened, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
 	m = opened.(model)
 	m.commitPath("/tmp/project")
 	m.screen = screenMain
+	m.focusEmptySlot()
 	if got := m.session.PosVals["PATH"]; len(got) != 1 || got[0] != "/tmp/project" {
 		t.Fatalf("PATH = %v, want [/tmp/project]", got)
 	}
@@ -39,7 +42,9 @@ func TestPathPickerOpenSelectEsc(t *testing.T) {
 // enter commits the highlighted entry.
 func TestPathPickerFilter(t *testing.T) {
 	m := testPathModel(t)
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
+	m.setCursor(m.rowIndexOf("PATH"))
+	m.focusEmptySlot()
+	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
 	m = opened.(model)
 
 	typed, _ := m.handlePickerKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("config")})
@@ -58,83 +63,6 @@ func TestPathPickerFilter(t *testing.T) {
 	}
 	if got := m.session.PosVals["PATH"]; len(got) != 1 || got[0] != path {
 		t.Fatalf("PATH = %v, want [%s]", got, path)
-	}
-}
-
-// TestActionMenu covers the enter action popup (run/copy/print/cancel).
-func TestActionMenu(t *testing.T) {
-	quits := func(cmd tea.Cmd) bool {
-		if cmd == nil {
-			return false
-		}
-		_, ok := cmd().(tea.QuitMsg)
-		return ok
-	}
-
-	m := testModel(t)
-	m.session.PosVals["PATTERN"] = []string{"foo"}
-
-	// Enter opens the menu with Run focused.
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = opened.(model)
-	if m.screen != screenAction || m.actions.sel != 0 {
-		t.Fatalf("after enter: menu=%v sel=%d, want true/0", m.screen == screenAction, m.actions.sel)
-	}
-	if !strings.Contains(m.View(), m.preview()) {
-		t.Errorf("action menu does not show the command preview")
-	}
-
-	// j/k navigate like up/down.
-	j, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-	m = j.(model)
-	if m.actions.sel != 1 {
-		t.Fatalf("after j: sel=%d, want 1", m.actions.sel)
-	}
-	k, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
-	m = k.(model)
-	if m.actions.sel != 0 {
-		t.Fatalf("after k: sel=%d, want 0", m.actions.sel)
-	}
-
-	// Enter ESC opens then closes.
-	closed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
-	m = closed.(model)
-	if m.screen == screenAction {
-		t.Fatal("esc did not close the action menu")
-	}
-
-	// Enter ENTER runs.
-	opened, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = opened.(model)
-	done, cmd := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = done.(model)
-	if !quits(cmd) || m.action != actionRun {
-		t.Fatalf("enter enter: quit=%v action=%v, want run", quits(cmd), m.action)
-	}
-
-	// Navigate to Cancel and activate.
-	m = testModel(t)
-	m.session.PosVals["PATTERN"] = []string{"foo"}
-	opened, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = opened.(model)
-	for i := 0; i < 4; i++ {
-		down, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
-		m = down.(model)
-	}
-	if m.actions.sel != 4 {
-		t.Fatalf("actionSel = %d, want 4", m.actions.sel)
-	}
-	cancelled, cmd := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = cancelled.(model)
-	if m.screen == screenAction || quits(cmd) {
-		t.Fatal("cancel should close without quitting")
-	}
-
-	// ctrl-p bypasses the popup.
-	printed, cmd := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlP})
-	m = printed.(model)
-	if !quits(cmd) || m.action != actionPrint {
-		t.Fatalf("ctrl+p: quit=%v action=%v, want print", quits(cmd), m.action)
 	}
 }
 
@@ -192,7 +120,7 @@ func TestQuitConfirm(t *testing.T) {
 	}
 }
 
-// TestEnumMenu checks space opens a value menu for enum flags.
+// TestEnumMenu checks enter opens a value menu for enum flags.
 func TestEnumMenu(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
 pool:
@@ -209,10 +137,8 @@ options: [Color]
 	}
 	sess, _ := Prefill(cfg, nil)
 	m := newModel("rg", cfg, sess)
-	m.setCursor(m.rowIndexOf("Color"))
+	m = addOption(m, "Color")
 
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
-	m = opened.(model)
 	if m.screen != screenEnum || len(m.enum.values) != 3 {
 		t.Fatalf("enum menu not open: %v values=%v", m.screen == screenEnum, m.enum.values)
 	}
@@ -248,10 +174,8 @@ options: [Color]
 	}
 	sess, _ := Prefill(cfg, nil)
 	m := newModel("rg", cfg, sess)
-	m.setCursor(m.rowIndexOf("Color"))
+	m = addOption(m, "Color")
 
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
-	m = opened.(model)
 	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("al")})
 	m = typed.(model)
 	if m.enum.filter != "al" {

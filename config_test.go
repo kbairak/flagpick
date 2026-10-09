@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 var (
@@ -67,6 +65,15 @@ func TestParseRealConfig(t *testing.T) {
 	}
 	if modes[0].HasFlag("Regular expression") {
 		t.Fatal("Regexp flag should be exclusive to the Regexp mode")
+	}
+	var regexpFlag Flag
+	for _, fl := range modes[1].Flags {
+		if fl.OptName() == "Regular expression" {
+			regexpFlag = fl
+		}
+	}
+	if regexpFlag == nil || !regexpFlag.Required() {
+		t.Fatal("Regular expression should be required in the Regexp mode")
 	}
 	if len(cfg.Positionals) != 2 {
 		t.Fatalf("positionals = %d, want 2", len(cfg.Positionals))
@@ -177,7 +184,19 @@ func TestParseDirenvConfig(t *testing.T) {
 	}
 }
 
-func TestSubcommandMenuShowsDescriptions(t *testing.T) {
+// resolvedByName returns the selectable path whose Name equals name.
+func resolvedByName(t *testing.T, cfg *CommandConfig, name string) Resolved {
+	t.Helper()
+	for _, r := range cfg.Resolved() {
+		if r.Name == name {
+			return r
+		}
+	}
+	t.Fatalf("no resolved path named %q", name)
+	return Resolved{}
+}
+
+func TestSubcommandDescriptions(t *testing.T) {
 	b, err := os.ReadFile("config/direnv.yaml")
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
@@ -186,43 +205,16 @@ func TestSubcommandMenuShowsDescriptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	m := newModel("direnv", cfg, sess)
-	upd, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
-	m = upd.(model)
-	var sub *SubcommandOption
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok {
-			sub = so
-		}
-	}
-	if sub == nil {
-		t.Fatal("no subcommand selector")
-	}
-	m.openSub(sub.Level)
-	view := m.subView()
-	if !strings.Contains(view, "allow") || !strings.Contains(view, "Grants direnv permission") {
-		t.Fatalf("menu does not show the subcommand description:\n%s", view)
+
+	// A subcommand path carries its own description.
+	allow := resolvedByName(t, cfg, "allow")
+	if !strings.Contains(allow.Description, "Grants direnv permission") {
+		t.Fatalf("description = %q, want it to mention the permission grant", allow.Description)
 	}
 
-	// Choosing a flag-less subcommand must stick: validate and assemble it.
-	for i, pi := range m.sub.paths {
-		if m.modes[pi].Name == "help" {
-			m.sub.sel = i
-		}
-	}
-	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if m.res().Name != "help" {
-		t.Fatalf("selected path = %q, want help", m.res().Name)
-	}
-	if !m.validate() {
-		t.Fatalf("help should validate: %s", m.errMsg)
-	}
-	if got := Assemble(m.res(), m.session); !reflect.DeepEqual(got, []string{"help"}) {
+	// A flag-less subcommand assembles to just its canonical verb.
+	help := resolvedByName(t, cfg, "help")
+	if got := Assemble(help, NewSession(cfg)); !reflect.DeepEqual(got, []string{"help"}) {
 		t.Fatalf("assemble = %v, want [help]", got)
 	}
 }
@@ -236,42 +228,12 @@ func TestRequiredSubcommandArgBlocksRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	m := newModel("direnv", cfg, sess)
-	upd, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
-	m = upd.(model)
 
-	var sub *SubcommandOption
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok {
-			sub = so
-		}
-	}
-	m.openSub(sub.Level)
-	for i, pi := range m.sub.paths {
-		if m.modes[pi].Name == "hook" {
-			m.sub.sel = i
-		}
-	}
-	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if m.res().Name != "hook" {
-		t.Fatalf("selected %q, want hook", m.res().Name)
-	}
-
-	// A missing required positional must fail validation and must not silently
-	// switch to another subcommand.
-	if m.validate() {
-		t.Fatal("hook without a shell should not validate")
-	}
-	if !strings.Contains(m.errMsg, "Hook shell") {
-		t.Fatalf("errMsg = %q, want it to mention Hook shell", m.errMsg)
-	}
-	if m.res().Name != "hook" {
-		t.Fatalf("path changed to %q; must stay hook", m.res().Name)
+	// A subcommand with a required positional reports it as missing.
+	hook := resolvedByName(t, cfg, "hook")
+	missing := MissingRequired(hook, NewSession(cfg))
+	if len(missing) == 0 || !strings.Contains(strings.Join(missing, ", "), "Hook shell") {
+		t.Fatalf("missing = %v, want Hook shell", missing)
 	}
 }
 
@@ -495,5 +457,30 @@ func TestManifestUpToDate(t *testing.T) {
 		if got := md5Hex(data); got != want {
 			t.Errorf("manifest stale for %s: manifest %s, computed %s; run 'make manifest'", name, want, got)
 		}
+	}
+}
+
+// TestFlagRequired checks that the flag `required` field parses and applies
+// only to the shape that selects it.
+func TestFlagRequired(t *testing.T) {
+	cfg, err := parseConfigBytes(t, []byte(`
+pool:
+  options:
+    - {name: X, kind: flag, type: string, long: --x, required: true}
+    - {name: Y, kind: flag, type: string, long: --y}
+options: [X, Y]
+`))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	byName := map[string]Flag{}
+	for _, f := range cfg.Resolved()[0].Flags {
+		byName[f.OptName()] = f
+	}
+	if !byName["X"].Required() {
+		t.Error("X.Required() = false, want true")
+	}
+	if byName["Y"].Required() {
+		t.Error("Y.Required() = true, want false")
 	}
 }

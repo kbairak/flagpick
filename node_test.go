@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -173,155 +172,6 @@ subcommands:
 	}
 }
 
-func TestDispatcherTabDoesNotCycleSubcommands(t *testing.T) {
-	cfg, err := parseConfigBytes(t, []byte(subcommandFixture))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("empty prefill: %v", err)
-	}
-	m := newModel("mycmd", cfg, sess)
-	if got := Assemble(m.res(), m.session); !reflect.DeepEqual(got, []string{"exec"}) {
-		t.Fatalf("default path assemble = %v, want [exec]", got)
-	}
-	before := m.mode
-	m.cycleMode(1)
-	if m.mode != before {
-		t.Fatalf("tab changed subcommand path to %q; use the subcommand menu", m.res().Name)
-	}
-}
-
-func TestSubcommandMenuOption(t *testing.T) {
-	cfg, err := parseConfigBytes(t, []byte(subcommandFixture))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	m := newModel("mycmd", cfg, sess)
-
-	// The active path exposes exactly one subcommand selector row.
-	var sub *SubcommandOption
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok {
-			sub = so
-		}
-	}
-	if sub == nil {
-		t.Fatal("no subcommand selector in the option list")
-	}
-	if sub.Label != "exec" {
-		t.Fatalf("selector label = %q, want exec", sub.Label)
-	}
-
-	// Open the menu and choose the next sibling (status, first mode Brief).
-	m.openSub(sub.Level)
-	if m.screen != screenSub || len(m.sub.paths) != 2 {
-		t.Fatalf("menu: picking=%v options=%d", m.screen == screenSub, len(m.sub.paths))
-	}
-	m.sub.sel = 1
-	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if m.res().Name != "status Brief" {
-		t.Fatalf("after choose: %q, want status Brief", m.res().Name)
-	}
-	if got := Assemble(m.res(), m.session); !reflect.DeepEqual(got, []string{"status"}) {
-		t.Fatalf("assemble = %v, want [status]", got)
-	}
-	// Once on the status path, the selector reflects that verb.
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok && so.Label != "status" {
-			t.Fatalf("selector label = %q, want status", so.Label)
-		}
-	}
-
-	// A positional not present on the new path is dropped on switch.
-	m.openSub(sub.Level)
-	m.sub.sel = 0 // back to exec
-	updated, _ = m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	m.session.PosVals["DIR"] = []string{"./x"}
-	m.openSub(sub.Level)
-	m.sub.sel = 1 // status Brief, which has no DIR
-	updated, _ = m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if hasValue(m.session.PosVals["DIR"]) {
-		t.Fatalf("DIR survived switching to status: %v", m.session.PosVals["DIR"])
-	}
-}
-
-func TestSubcommandViewFits(t *testing.T) {
-	cfg, err := parseConfigBytes(t, []byte(subcommandFixture))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	for _, h := range []int{10, 14, 20, 30} {
-		for _, w := range []int{40, 60, 100} {
-			m := newModel("mycmd", cfg, sess)
-			upd, _ := m.Update(tea.WindowSizeMsg{Width: w, Height: h})
-			m = upd.(model)
-			lines := strings.Split(m.View(), "\n")
-			if len(lines) != h {
-				t.Errorf("%dx%d: %d lines", w, h, len(lines))
-			}
-			for i, l := range lines {
-				if n := len([]rune(l)); n > w-1 {
-					t.Errorf("%dx%d: line %d is %d cols", w, h, i, n)
-				}
-			}
-		}
-	}
-}
-
-func TestSubcommandMenuFuzzy(t *testing.T) {
-	cfg, err := parseConfigBytes(t, []byte(subcommandFixture))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	m := newModel("mycmd", cfg, sess)
-
-	var sub *SubcommandOption
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok {
-			sub = so
-		}
-	}
-	m.openSub(sub.Level)
-	typed, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("ex")})
-	m = typed.(model)
-	if got := m.filteredSub(); len(got) != 1 || m.modes[got[0]].Name != "exec" {
-		t.Fatalf("filtered = %v", got)
-	}
-	// ctrl-w deletes the last filter word.
-	cleared, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyCtrlW})
-	m = cleared.(model)
-	if m.sub.filter != "" {
-		t.Fatalf("filter after ctrl-w = %q, want empty", m.sub.filter)
-	}
-	if got := m.filteredSub(); len(got) != 2 {
-		t.Fatalf("filtered after ctrl-w = %v, want all", got)
-	}
-	typed, _ = m.handleSubKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("ex")})
-	m = typed.(model)
-	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if m.res().Name != "exec" {
-		t.Fatalf("selected %q, want exec", m.res().Name)
-	}
-}
-
 func TestEnumPositional(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
 pool:
@@ -345,8 +195,9 @@ options: [SHELL]
 	// The TUI opens the value menu for an enum positional.
 	sess, _ := Prefill(cfg, nil)
 	m := newModel("mycmd", cfg, sess)
-	m.setCursor(m.rowIndexOf("SHELL"))
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
+	m.focusEmptySlot()
+	m.moveFocus(1) // onto the SHELL placeholder
+	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
 	m = opened.(model)
 	if m.screen != screenEnum || len(m.enum.values) != 2 {
 		t.Fatalf("enum menu: picking=%v values=%v", m.screen == screenEnum, m.enum.values)
@@ -357,88 +208,6 @@ options: [SHELL]
 	if got := m.session.PosVals["SHELL"]; len(got) != 1 || got[0] != "zsh" {
 		t.Fatalf("SHELL = %v, want [zsh]", got)
 	}
-}
-
-func TestGitRemoteNests(t *testing.T) {
-	b, err := os.ReadFile("config/git.yaml")
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
-	cfg, err := parseConfigBytes(t, b)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	sess, err := Prefill(cfg, nil)
-	if err != nil {
-		t.Fatalf("prefill: %v", err)
-	}
-	m := newModel("git", cfg, sess)
-
-	// The root menu lists each top-level subcommand once, not every leaf.
-	sub := firstSelector(t, m)
-	m.openSub(sub.Level)
-	remote := 0
-	for _, pi := range m.sub.paths {
-		if m.subLabel(pi) == "remote" {
-			remote++
-		}
-	}
-	if remote != 1 {
-		t.Fatalf("root menu has %d 'remote' entries, want 1", remote)
-	}
-
-	// Choosing "remote" reveals a nested menu of its subcommands.
-	for i, pi := range m.sub.paths {
-		if m.subLabel(pi) == "remote" {
-			m.sub.sel = i
-		}
-	}
-	updated, _ := m.handleSubKey(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
-	if m.res().Name != "remote add" {
-		t.Fatalf("after choosing remote: %q, want a remote subcommand", m.res().Name)
-	}
-	sub2 := selectorAt(t, m, 1)
-	if sub2 == nil {
-		t.Fatal("no nested subcommand selector after choosing remote")
-	}
-	if sub2.Label != "add" {
-		t.Fatalf("nested selector = %q, want add", sub2.Label)
-	}
-	m.openSub(sub2.Level)
-	if len(m.sub.paths) != 9 {
-		t.Fatalf("remote subcommands = %d, want 9", len(m.sub.paths))
-	}
-	names := map[string]int{}
-	for _, pi := range m.sub.paths {
-		names[m.subLabel(pi)]++
-	}
-	for _, want := range []string{"add", "remove", "rename", "show", "prune", "update", "set-head", "set-url", "get-url"} {
-		if names[want] != 1 {
-			t.Fatalf("remote subcommand %q appears %d times", want, names[want])
-		}
-	}
-}
-
-func firstSelector(t *testing.T, m model) *SubcommandOption {
-	t.Helper()
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok {
-			return so
-		}
-	}
-	t.Fatal("no subcommand selector")
-	return nil
-}
-
-func selectorAt(t *testing.T, m model, level int) *SubcommandOption {
-	t.Helper()
-	for _, o := range m.listOptions() {
-		if so, ok := o.(*SubcommandOption); ok && so.Level == level {
-			return so
-		}
-	}
-	return nil
 }
 
 func TestConfigValidationRules(t *testing.T) {

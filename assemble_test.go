@@ -460,6 +460,23 @@ func TestMissingRequired(t *testing.T) {
 	if got := MissingRequired(res1(cfg2), s2); len(got) != 0 {
 		t.Fatalf("filled variadic: got %#v, want empty", got)
 	}
+
+	cfg3, err := parseConfigBytes(t, []byte(
+		"pool:\n  options:\n    - name: X\n      kind: flag\n      type: string\n      long: --x\n      repeatable: true\n      required: true\noptions: [X]\n",
+	))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	s3 := NewSession(cfg3)
+	if got := MissingRequired(res1(cfg3), s3); !reflect.DeepEqual(got, []string{"X"}) {
+		t.Fatalf("empty required flag: got %#v, want [X]", got)
+	}
+	fs := s3.Flags["X"]
+	fs.Values = []string{"v"}
+	s3.Flags["X"] = fs
+	if got := MissingRequired(res1(cfg3), s3); len(got) != 0 {
+		t.Fatalf("filled required flag: got %#v, want empty", got)
+	}
 }
 
 func TestCountFlag(t *testing.T) {

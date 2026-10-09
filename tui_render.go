@@ -1,4 +1,5 @@
-// This file renders the main two-pane view and computes layout.
+// This file renders the main view: the WYSIWYG preview box, the options and
+// description panes, and the bottom status line.
 package main
 
 import (
@@ -8,8 +9,11 @@ import (
 )
 
 var (
-	boxBorder           = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("205"))
-	dimStyle            = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	borderColor = lipgloss.Color("205")
+	boxBorder   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(borderColor)
+	// dimStyle is used for placeholders and secondary text. The color is
+	// adaptive: a dark gray on light terminals, a light gray on dark terminals.
+	dimStyle            = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "240", Dark: "245"})
 	cursorStyle         = lipgloss.NewStyle().Reverse(true)
 	activeStyle         = lipgloss.NewStyle().Background(lipgloss.Color("255")).Foreground(lipgloss.Color("0"))
 	errStyle            = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
@@ -17,11 +21,54 @@ var (
 	titleStyle          = lipgloss.NewStyle().Bold(true)
 	buttonStyle         = lipgloss.NewStyle().Padding(0, 2)
 	buttonSelectedStyle = buttonStyle.Background(lipgloss.Color("255")).Foreground(lipgloss.Color("0"))
-	previewStyle        = lipgloss.NewStyle().BorderTop(true).BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
+	// previewEmittedStyle leaves emitted tokens in the terminal's default
+	// foreground ("white" on dark themes, black on light), so they stay legible
+	// regardless of the background.
+	previewEmittedStyle = lipgloss.NewStyle()
 )
 
-// popupFilterHint is the shared footer hint for the enum and subcommand menus.
+// popupFilterHint is the shared footer hint for the enum menu.
 const popupFilterHint = "type to filter · ctrl-w word · enter choose · up/down · esc cancel"
+
+// statusHint is shown in the bottom line when there is no transient message.
+const statusHint = "tab focus · enter edit · type filter · up/down select · ctrl-n/p mode · ctrl-s run · ctrl-y copy · ctrl-o print · ctrl-shift-h/l reorder · ctrl-? help · ctrl-c quit"
+
+// titledBox renders a rounded box with the title embedded in the top border,
+// e.g. ╭─ Options ─────╮. w is the body content width (total width w+2), h the
+// body height (total height h+2). lipgloss has no border-title support, so the
+// top border line is drawn by hand; the body uses lipgloss borders (left,
+// right, bottom) so ANSI widths are handled correctly.
+func titledBox(title, content string, w, h int) string {
+	if w < 1 {
+		w = 1
+	}
+	if h < 1 {
+		h = 1
+	}
+	lines := []string{}
+	if content != "" {
+		lines = strings.Split(content, "\n")
+	}
+	for len(lines) < h {
+		lines = append(lines, "")
+	}
+	if len(lines) > h {
+		lines = lines[:h]
+	}
+	body := boxBorder.BorderTop(false).Width(w).Height(h).Render(strings.Join(lines, "\n"))
+
+	b := lipgloss.RoundedBorder()
+	bc := lipgloss.NewStyle().Foreground(borderColor)
+	// Top: TL + Top + " " + title + " " + fill*Top + TR, total width w+2.
+	tw := lipgloss.Width(title)
+	fill := w - tw - 3
+	if fill < 0 {
+		fill = 0
+	}
+	top := bc.Render(b.TopLeft) + bc.Render(b.Top) + " " + title + " " +
+		bc.Render(strings.Repeat(b.Top, fill)) + bc.Render(b.TopRight)
+	return top + "\n" + body
+}
 
 func (m model) View() string {
 	switch m.screen {
@@ -29,8 +76,6 @@ func (m model) View() string {
 		return m.helpView()
 	case screenConfirm:
 		return m.confirmView()
-	case screenAction:
-		return m.actionView()
 	case screenEnum:
 		return m.enumView()
 	case screenSub:
@@ -41,19 +86,46 @@ func (m model) View() string {
 
 	leftW, rightW := m.paneWidths()
 	paneH := m.paneHeight()
-	bodyH := m.pageSize()
 
-	list := boxBorder.Width(leftW).Height(paneH).Render(titleStyle.Render("Options") + "\n" + m.renderList(bodyH, leftW))
-	desc := boxBorder.Width(rightW).Height(paneH).Render(titleStyle.Render("Description") + "\n" + m.renderDescription(rightW, bodyH))
+	left := m.optionsBox(leftW, paneH)
+	desc := m.descriptionBox(rightW, paneH)
+	panes := lipgloss.JoinHorizontal(lipgloss.Top, left, " ", desc)
 
-	panes := lipgloss.JoinHorizontal(lipgloss.Top, list, " ", desc)
+	lines := append([]string{}, m.previewFrame()...)
+	lines = append(lines, panes, m.renderStatus())
+	return strings.Join(lines, "\n")
+}
 
+// optionsBox renders the Options pane: filter line and flag list, with the
+// title in the border. When a positional is focused the pane is empty
+// (positionals are edited from the preview).
+func (m model) optionsBox(w, paneH int) string {
+	var body []string
+	if !m.focusedIsPositional() && !m.focusedIsSub() && len(m.segmentFlags()) > 0 {
+		listMax := paneH
+		if paneH >= 2 {
+			body = append(body, dimStyle.Render(truncate("Filter: "+m.filter+"▏", w)))
+			listMax = paneH - 1
+		}
+		if listMax >= 1 {
+			body = append(body, m.renderList(listMax, w))
+		}
+	}
+	return titledBox("Options", strings.Join(body, "\n"), w, paneH)
+}
+
+// descriptionBox renders the Description pane for the Options-list selection.
+func (m model) descriptionBox(w, paneH int) string {
+	var body []string
+	if paneH >= 1 {
+		body = append(body, m.renderDescription(w, paneH))
+	}
+	return titledBox("Description", strings.Join(body, "\n"), w, paneH)
+}
+
+// renderStatus renders the bottom line: a transient message or the key hint.
+func (m model) renderStatus() string {
 	cw := m.contentWidth()
-
-	filterLine := truncate("filter: "+m.filter+"▏", cw)
-
-	preview := previewStyle.Width(cw).Render(truncate("$ "+m.preview(), cw))
-
 	plain := m.statusMsg
 	isErr := false
 	if m.errMsg != "" {
@@ -61,55 +133,17 @@ func (m model) View() string {
 		isErr = true
 	}
 	if plain == "" {
-		plain = "space toggle/edit · enter menu · ctrl-x clear · ctrl-j/k cycle · ctrl-d/u half-page · ctrl-shift-j/k reorder · pgup/pgdn scroll desc · ctrl-r run · ctrl-y copy+exit · ctrl-shift-y copy · ctrl-p print · ctrl-? help · esc confirm · ctrl-c quit"
+		plain = statusHint
 	}
 	plain = truncate(plain, cw)
-
-	var status string
 	switch {
 	case isErr:
-		status = errStyle.Render(plain)
+		return errStyle.Render(plain)
 	case m.statusMsg != "":
-		status = statusStyle.Render(plain)
+		return statusStyle.Render(plain)
 	default:
-		status = dimStyle.Render(plain)
+		return dimStyle.Render(plain)
 	}
-
-	top := []string{preview, filterLine}
-	if m.modeSelectorVisible() {
-		top = append(top, m.modePicker(), m.modeUsage())
-	}
-	top = append(top, panes, status)
-	return strings.Join(top, "\n")
-}
-
-// modeSelectorVisible reports whether the horizontal mode picker should render.
-// Subcommands are chosen from the options pane instead, so a tree with no mode
-// forks (a pure dispatcher like direnv) hides it.
-func (m model) modeSelectorVisible() bool {
-	return len(m.modes) > 1 && m.res().HasBranchKind(BranchMode)
-}
-
-// modePicker renders the horizontal mode selector.
-func (m model) modePicker() string {
-	var parts []string
-	for i, r := range m.modes {
-		name := r.Name
-		if name == "" {
-			name = "mode"
-		}
-		if i == m.mode {
-			parts = append(parts, activeStyle.Render(name))
-		} else {
-			parts = append(parts, dimStyle.Render(name))
-		}
-	}
-	return truncate("mode: "+strings.Join(parts, "  "), m.contentWidth())
-}
-
-// modeUsage renders the one-line usage for the active mode.
-func (m model) modeUsage() string {
-	return dimStyle.Render(truncate(m.res().Usage, m.contentWidth()))
 }
 
 // paneWidths returns the content widths of the left (options) and right
@@ -151,16 +185,11 @@ func (m model) contentWidth() int {
 	return w
 }
 
-// paneHeight returns the content height of the panes so the panes plus the
-// three leading lines (filter, preview border, preview) and the trailing
-// status line fit the terminal height. Each pane also has a top and bottom
-// border.
+// paneHeight is the content height of the Options/Description boxes: the
+// terminal height minus the preview box, the bottom status line, and each
+// box's two borders.
 func (m model) paneHeight() int {
-	extra := 0
-	if m.modeSelectorVisible() {
-		extra = 2 // mode picker + usage line
-	}
-	h := m.height - 6 - extra
+	h := m.height - m.previewTotalHeight() - 3
 	if h < 1 {
 		h = 1
 	}
@@ -183,10 +212,10 @@ func truncate(s string, w int) string {
 	return string(r[:w-1]) + "…"
 }
 
-// pageSize is the number of body lines shown in a pane (pane height minus
-// the title line) and the step used to scroll the description.
+// pageSize is the number of option rows shown and the step used to scroll the
+// description.
 func (m model) pageSize() int {
-	h := m.paneHeight() - 1
+	h := m.paneHeight() - 2
 	if h < 1 {
 		h = 1
 	}
@@ -194,11 +223,14 @@ func (m model) pageSize() int {
 }
 
 func (m model) renderDescription(width, maxLines int) string {
-	r, ok := m.selectedRow()
+	if maxLines < 1 {
+		maxLines = 1
+	}
+	opt, ok := m.descriptionOption()
 	if !ok {
 		return dimStyle.Render(truncate("(none)", width))
 	}
-	desc := strings.TrimSpace(r.opt.OptDescription())
+	desc := strings.TrimSpace(opt.OptDescription())
 	if desc == "" {
 		return dimStyle.Render(truncate("(no description)", width))
 	}
@@ -278,19 +310,9 @@ func (m model) renderList(maxLines, width int) string {
 	return b.String()
 }
 
-// activeRow reports whether r is the row currently open for editing.
-func (m model) activeRow(r row) bool {
-	if !m.editing || r.opt == nil || r.opt.OptName() != m.editingName {
-		return false
-	}
-	switch r.kind {
-	case rowAdd:
-		return m.editingIndex < 0
-	case rowValue:
-		return m.editingIndex == r.valIdx
-	}
-	return editableKind(r.opt) && m.editingIndex < 0
-}
+// activeRow reports whether r is the row currently being edited. Editing now
+// happens in the preview, so this is always false; kept for the list renderer.
+func (m model) activeRow(row) bool { return false }
 
 func renderRow(m model, r row, content int) string {
 	if r.kind == rowSep {
@@ -299,24 +321,16 @@ func renderRow(m model, r row, content int) string {
 	name := r.opt.OptName()
 	switch r.kind {
 	case rowAdd:
-		if m.editing && m.editingName == name && m.editingIndex < 0 {
-			return m.editingLabel + m.input.View()
-		}
 		verb := "+ add "
 		if m.isPath(r.opt) {
 			verb = "+ pick "
 		}
 		return truncate(verb+name, content)
 	case rowValue:
-		if m.editing && m.editingName == name && m.editingIndex == r.valIdx {
-			return m.editingLabel + m.input.View()
-		}
 		return truncate(valueLabel(name, r.valIdx)+r.value, content)
 	}
 
 	switch v := r.opt.(type) {
-	case *SubcommandOption:
-		return truncate("Command: "+v.Label, content)
 	case *BoolFlag:
 		fs := m.session.Flags[name]
 		glyph := "[ ]"
@@ -332,16 +346,10 @@ func renderRow(m model, r row, content int) string {
 		}
 		return line
 	case *StringPositional:
-		if m.editing && m.editingName == name && m.editingIndex < 0 {
-			return m.editingLabel + m.input.View()
-		}
 		return truncate(name+": "+firstValue(m.session.PosVals[name]), content)
 	case *EnumPositional:
 		return truncate(name+": "+firstValue(m.session.PosVals[name]), content)
 	case *StringFlag, *IntFlag, *EnumFlag, *SizeFlag:
-		if m.editing && m.editingName == name && m.editingIndex < 0 {
-			return m.editingLabel + m.input.View()
-		}
 		return truncate(name+": "+m.session.Flags[name].First(), content)
 	case *CountFlag:
 		n := m.session.Flags[name].Count
@@ -349,7 +357,7 @@ func renderRow(m model, r row, content int) string {
 		if n > 0 {
 			line += ": " + strings.Repeat("×", n)
 		}
-		if v, ok := r.opt.(*CountFlag); ok && v.Short() != "" && len([]rune(line))+1+len([]rune(v.Short())) <= content {
+		if v.Short() != "" && len([]rune(line))+1+len([]rune(v.Short())) <= content {
 			line += " " + dimStyle.Render(v.Short())
 		}
 		return truncate(line, content)

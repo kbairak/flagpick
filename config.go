@@ -86,22 +86,22 @@ func decodeFlag(node *yaml.Node) (Flag, error) {
 	switch head.Type {
 	case KindBool:
 		f = &BoolFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "negative", "negative_short", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "negative", "negative_short", "repeatable", "required", "conflicts", "requires")
 	case KindString:
 		f = &StringFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "required", "conflicts", "requires")
 	case KindInt:
 		f = &IntFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "required", "conflicts", "requires")
 	case KindEnum:
 		f = &EnumFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires", "values")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "required", "conflicts", "requires", "values")
 	case KindSize:
 		f = &SizeFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "required", "conflicts", "requires")
 	case KindCount:
 		f = &CountFlag{}
-		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "conflicts", "requires")
+		allowed = fieldSet("kind", "name", "type", "description", "long", "short", "repeatable", "required", "conflicts", "requires")
 	default:
 		return nil, fmt.Errorf("unsupported flag type %q", head.Type)
 	}

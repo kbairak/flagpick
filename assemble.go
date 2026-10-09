@@ -9,6 +9,8 @@ type Session struct {
 	Flags   map[string]FlagState // flag name -> state
 	Order   []string             // flag names, emit order (starts as schema order)
 	PosVals map[string][]string  // positional name -> values (scalars hold <=1)
+
+	path int // resolved-path index Prefill matched, or -1 when unset
 }
 
 // NewSession builds a session with Order set to schema flag order.
@@ -17,6 +19,7 @@ func NewSession(cfg *CommandConfig) *Session {
 		Flags:   map[string]FlagState{},
 		Order:   make([]string, 0, len(cfg.Flags)),
 		PosVals: map[string][]string{},
+		path:    -1,
 	}
 	for _, f := range cfg.Flags {
 		s.Flags[f.OptName()] = FlagState{}
@@ -124,9 +127,10 @@ func Prefill(cfg *CommandConfig, tokens []string) (*Session, error) {
 		return NewSession(cfg), nil
 	}
 	var firstErr error
-	for _, res := range cfg.Resolved() {
+	for i, res := range cfg.Resolved() {
 		s, err := prefillPath(cfg, res, tokens)
 		if err == nil {
+			s.path = i
 			return s, nil
 		}
 		if firstErr == nil {
@@ -416,7 +420,8 @@ func applyPrefillFlag(cfg *CommandConfig, s *Session, f Flag) {
 	}
 }
 
-// MissingRequired returns names of required positionals that have no value.
+// MissingRequired returns the names of required positionals with no value and
+// required flags that are not set.
 func MissingRequired(res Resolved, s *Session) []string {
 	var out []string
 	for _, p := range res.Positionals {
@@ -427,6 +432,16 @@ func MissingRequired(res Resolved, s *Session) []string {
 			continue
 		}
 		out = append(out, p.OptName())
+	}
+	for _, f := range res.Flags {
+		if !f.Required() {
+			continue
+		}
+		fs := s.Flags[f.OptName()]
+		if fs.Checked || fs.Filled() {
+			continue
+		}
+		out = append(out, f.OptName())
 	}
 	return out
 }

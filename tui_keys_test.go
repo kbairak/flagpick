@@ -7,15 +7,23 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// focusPreviewToken focuses the first preview token backed by name.
+func focusPreviewToken(m model, name string) model {
+	for i, tk := range m.previewTokens() {
+		if tk.name == name && tk.focusable {
+			m.focus = i
+			return m
+		}
+	}
+	return m
+}
+
 // TestIntFlagInput checks that an int flag field rejects non-digits.
 func TestIntFlagInput(t *testing.T) {
 	m := testValueModel(t)
-	m.setCursor(m.rowIndexOf("After context"))
-
-	opened, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
-	m = opened.(model)
+	m = addOption(m, "After context")
 	if !m.editing {
-		t.Fatal("space did not begin editing the int flag")
+		t.Fatal("enter did not begin editing the int flag")
 	}
 
 	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
@@ -39,12 +47,12 @@ func TestIntFlagInput(t *testing.T) {
 	}
 }
 
-// TestCtrlX checks ctrl-x clears the selected entry.
+// TestCtrlX checks ctrl-x clears the focused filled token.
 func TestCtrlX(t *testing.T) {
 	// Checked bool -> unchecked.
 	m := testModel(t)
 	m.session.Flags["Ignore case"] = FlagState{Checked: true}
-	m.setCursor(m.rowIndexOf("Ignore case"))
+	m = focusPreviewToken(m, "Ignore case")
 	x, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlX})
 	m = x.(model)
 	if m.session.Flags["Ignore case"].Checked {
@@ -54,7 +62,7 @@ func TestCtrlX(t *testing.T) {
 	// Value flag -> emptied.
 	m2 := testValueModel(t)
 	m2.session.Flags["Replace"] = FlagState{Values: []string{"x"}}
-	m2.setCursor(m2.rowIndexOf("Replace"))
+	m2 = focusPreviewToken(m2, "Replace")
 	x, _ = m2.handleKey(tea.KeyMsg{Type: tea.KeyCtrlX})
 	m2 = x.(model)
 	if m2.session.Flags["Replace"].First() != "" {
@@ -64,7 +72,7 @@ func TestCtrlX(t *testing.T) {
 	// Positional -> emptied.
 	m3 := testModel(t)
 	m3.session.PosVals["PATTERN"] = []string{"foo"}
-	m3.setCursor(m3.rowIndexOf("PATTERN"))
+	m3 = focusPreviewToken(m3, "PATTERN")
 	x, _ = m3.handleKey(tea.KeyMsg{Type: tea.KeyCtrlX})
 	m3 = x.(model)
 	if hasValue(m3.session.PosVals["PATTERN"]) {
@@ -72,23 +80,24 @@ func TestCtrlX(t *testing.T) {
 	}
 }
 
-// TestCSIReorder checks ctrl+shift+j/k delivered as CSI-u sequences reorder.
+// TestCSIReorder checks ctrl+shift+h/l delivered as CSI-u sequences reorder the
+// focused filled flag left/right.
 func TestCSIReorder(t *testing.T) {
 	m := testModel(t)
 	m.session.Flags["Ignore case"] = FlagState{Checked: true}
 	m.session.Flags["Smart case"] = FlagState{Checked: true}
-	m.setCursor(m.rowIndexOf("Ignore case"))
+	m = focusPreviewToken(m, "Ignore case")
 
-	updated, _ := m.Update([]byte("\x1b[106;6u")) // ctrl+shift+j
+	updated, _ := m.Update([]byte("\x1b[108;6u")) // ctrl+shift+l moves right
 	m = updated.(model)
 	if m.session.Order[0] != "Smart case" || m.session.Order[1] != "Ignore case" {
-		t.Fatalf("after ctrl+shift+j: %v", m.session.Order)
+		t.Fatalf("after ctrl+shift+l: %v", m.session.Order)
 	}
 
-	updated, _ = m.Update([]byte("\x1b[107;6u")) // ctrl+shift+k
+	updated, _ = m.Update([]byte("\x1b[104;6u")) // ctrl+shift+h moves left
 	m = updated.(model)
 	if m.session.Order[0] != "Ignore case" {
-		t.Fatalf("after ctrl+shift+k: %v", m.session.Order)
+		t.Fatalf("after ctrl+shift+h: %v", m.session.Order)
 	}
 
 	// ctrl+j without shift (CSI-u) still moves the cursor.
@@ -100,16 +109,16 @@ func TestCSIReorder(t *testing.T) {
 		t.Fatalf("ctrl+j csi cursor = %d, want 1", m2.cursor)
 	}
 
-	// Other ctrl+letters delivered as CSI-u still work (ctrl+p prints).
+	// Other ctrl+letters delivered as CSI-u still work (ctrl+o prints).
 	m3 := testModel(t)
 	m3.session.PosVals["PATTERN"] = []string{"foo"}
-	updated, cmd := m3.Update([]byte("\x1b[112;5u")) // ctrl+p
+	updated, cmd := m3.Update([]byte("\x1b[111;5u")) // ctrl+o
 	m3 = updated.(model)
 	if m3.action != actionPrint || cmd == nil {
-		t.Fatalf("ctrl+p csi: action=%v cmd=%v", m3.action, cmd)
+		t.Fatalf("ctrl+o csi: action=%v cmd=%v", m3.action, cmd)
 	}
 
-	// Ambiguous special keys as CSI-u: ESC clears the filter, enter opens menu.
+	// Ambiguous special keys as CSI-u: ESC clears the filter.
 	m4 := testModel(t)
 	m4.filter = "abc"
 	updated, _ = m4.Update([]byte("\x1b[27u")) // escape
@@ -117,11 +126,16 @@ func TestCSIReorder(t *testing.T) {
 	if m4.filter != "" {
 		t.Fatalf("escape csi did not clear filter: %q", m4.filter)
 	}
+
+	// enter activates the focused empty-option slot's selection.
 	m5 := testModel(t)
+	m5.focusEmptySlot()
+	m5.filter = "Ignore case"
+	m5.syncFilterCursor()
 	updated, _ = m5.Update([]byte("\x1b[13u")) // enter
 	m5 = updated.(model)
-	if m5.screen != screenAction {
-		t.Fatal("enter csi did not open the menu")
+	if !m5.session.Flags["Ignore case"].Checked {
+		t.Fatal("enter csi did not activate the focused slot")
 	}
 }
 
@@ -129,6 +143,7 @@ func TestCSIReorder(t *testing.T) {
 // ctrl-j / ctrl-k.
 func TestArrowKeysMoveCursor(t *testing.T) {
 	m := testModel(t)
+	m.setCursor(0)
 	down, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
 	if m = down.(model); m.cursor != 1 {
 		t.Fatalf("after down: cursor = %d, want 1", m.cursor)
@@ -139,16 +154,16 @@ func TestArrowKeysMoveCursor(t *testing.T) {
 	}
 }
 
-// TestEnterAdvancesToNextInput checks that committing a variadic value moves
-// the cursor to the next element without activating it.
-func TestEnterAdvancesToNextInput(t *testing.T) {
+// TestFillVariadicPositional checks that filling a variadic positional from the
+// empty-option slot appends a value and returns focus to the empty slot.
+func TestFillVariadicPositional(t *testing.T) {
 	m := testModel(t)
-	m.filter = "PATH"
-	m.setCursor(0)
+	m.setCursor(m.rowIndexOf("PATH"))
+	m.focusEmptySlot()
 
-	m.activate()
+	m.activateOption("PATH")
 	if !m.editing {
-		t.Fatal("activate did not begin editing")
+		t.Fatal("activateOption did not begin editing")
 	}
 	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("src")})
 	m = typed.(model)
@@ -159,21 +174,20 @@ func TestEnterAdvancesToNextInput(t *testing.T) {
 		t.Fatalf("PATH = %v, want [src]", got)
 	}
 	if m.editing {
-		t.Fatal("next element should not be activated")
+		t.Fatal("editing should have committed")
 	}
-	r, ok := m.selectedRow()
-	if !ok || r.kind != rowAdd {
-		t.Fatalf("cursor row = %#v, want the add row", r)
+	if tk, ok := m.focusedToken(); !ok || tk.kind != pvEmpty {
+		t.Fatalf("focus = %#v, want the empty-option slot", tk)
 	}
 }
 
-// TestEnterAdvancesFromScalar checks the same advance-after-commit for a
-// non-variadic positional.
-func TestEnterAdvancesFromScalar(t *testing.T) {
+// TestFillScalarPositional checks the same for a non-variadic positional.
+func TestFillScalarPositional(t *testing.T) {
 	m := testModel(t)
 	m.setCursor(m.rowIndexOf("PATTERN"))
+	m.focusEmptySlot()
 
-	m.activate()
+	m.activateOption("PATTERN")
 	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo")})
 	m = typed.(model)
 	committed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
@@ -183,11 +197,28 @@ func TestEnterAdvancesFromScalar(t *testing.T) {
 		t.Fatalf("PATTERN = %v, want [foo]", got)
 	}
 	if m.editing {
-		t.Fatal("next element should not be activated")
+		t.Fatal("editing should have committed")
 	}
-	r, ok := m.selectedRow()
-	if !ok || r.kind == rowSep || (r.opt != nil && r.opt.OptName() == "PATTERN") {
-		t.Fatalf("cursor did not advance to another element: %#v", r)
+	if tk, ok := m.focusedToken(); !ok || tk.name != "PATH" {
+		t.Fatalf("focus = %#v, want the next positional (PATH)", tk)
+	}
+}
+
+// TestFillAbort checks esc reverts an in-progress fill.
+func TestFillAbort(t *testing.T) {
+	m := testModel(t)
+	m.setCursor(m.rowIndexOf("PATTERN"))
+	m.focusEmptySlot()
+	m.activateOption("PATTERN")
+	typed, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo")})
+	m = typed.(model)
+	esc, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEscape})
+	m = esc.(model)
+	if m.editing {
+		t.Fatal("esc did not abort the fill")
+	}
+	if hasValue(m.session.PosVals["PATTERN"]) {
+		t.Fatalf("PATTERN = %v, want empty after abort", m.session.PosVals["PATTERN"])
 	}
 }
 

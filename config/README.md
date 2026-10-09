@@ -200,6 +200,7 @@ Flags (`kind: flag`) accept:
 | `negative`       | no       | a `--no-...` form; makes a bool tri-state (see §4.5)           |
 | `negative_short` | no       | short form for `negative` (e.g. `-N`); requires `negative`     |
 | `repeatable`     | no       | collect multiple values, one occurrence each                   |
+| `required`       | no       | must be set for the active shape to validate (default false); for a repeatable flag, at least one value must be present |
 | `conflicts`      | no       | names of flags that cannot be set at the same time             |
 | `requires`       | no       | names of flags that must also be set                           |
 | `values`         | enum     | the allowed values for `type: enum`                            |
@@ -297,9 +298,10 @@ When you run `fp <command> <tokens...>`, the tokens are parsed against the tree:
    positionals is an error — never a silent drop or a raw passthrough (use a
    `passthrough` positional when you actually want that, §6).
 
-In the TUI, `modes` and `subcommands` both appear as selectable shapes; the
-active path's `usage` and `description` are shown, and the preview is the fully
-assembled, shell-quoted command.
+In the TUI, the preview is a WYSIWYG template of the active path: emitted tokens
+render white, unfilled slots render gray, and a `✓`/`✗` marks whether the
+command is ready. The white tokens are exactly the assembled, shell-quoted
+command that will run.
 
 ---
 
@@ -342,6 +344,9 @@ A config is rejected when any of these fail:
 - Mode `name`s are unique among siblings.
 - Subcommand `name`s and `aliases` are non-empty, do not start with `-`, and
   are unique among siblings (a name may not equal a sibling alias).
+- A flag's `required` field is enforced only for the shape that selects it, so
+  the same definition can be required in one shape and optional in another
+  (define it again in the other shape's own `pool`; nearest definition wins).
 - A node has either `modes` or shape fields, not both.
 
 ---

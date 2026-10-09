@@ -84,6 +84,7 @@ type Flag interface {
 	Negative() string
 	NegativeShort() string
 	Repeatable() bool
+	Required() bool
 	Conflicts() []string
 	Requires() []string
 	// TakesValue reports whether the flag consumes a value argument.
@@ -100,6 +101,7 @@ type FlagBase struct {
 	NegativeForm      string   `yaml:"negative"`
 	NegativeShortForm string   `yaml:"negative_short"`
 	IsRepeatable      bool     `yaml:"repeatable"`
+	IsRequired        bool     `yaml:"required"`
 	ConflictList      []string `yaml:"conflicts"`
 	RequireList       []string `yaml:"requires"`
 }
@@ -109,6 +111,7 @@ func (f *FlagBase) Short() string         { return f.ShortForm }
 func (f *FlagBase) Negative() string      { return f.NegativeForm }
 func (f *FlagBase) NegativeShort() string { return f.NegativeShortForm }
 func (f *FlagBase) Repeatable() bool      { return f.IsRepeatable }
+func (f *FlagBase) Required() bool        { return f.IsRequired }
 func (f *FlagBase) Conflicts() []string   { return f.ConflictList }
 func (f *FlagBase) Requires() []string    { return f.RequireList }
 

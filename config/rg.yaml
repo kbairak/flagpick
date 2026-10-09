@@ -19,6 +19,7 @@ pool:
       long: --regexp
       short: "-e"
       repeatable: true
+      required: true
       description: >
         A pattern to search for; may be repeated. With it, positionals are paths.
     - name: Pattern file

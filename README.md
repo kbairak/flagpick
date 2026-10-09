@@ -73,33 +73,38 @@ the TUI. `flagpick`'s own flags must come before it:
 | `-h`, `--help`    | usage                                                |
 | `-V`, `--version` | version                                              |
 
-On launch the TUI shows a live preview of the assembled command. The default
-action is to run it; from the menu (or via a direct key) you can also copy it to
-the clipboard or print it. Running replaces the `flagpick` process with the
-wrapped command (`exec`), so after it exits you're back at your shell.
+On launch the TUI shows a WYSIWYG preview of the command as a template: emitted
+tokens are shown in white, unfilled slots in gray, and a `✓`/`✗` marks whether
+the command is ready to run. `tab`/`shift-tab` move the focus between tokens;
+`enter` fills the focused slot. For a command with subcommands (`direnv`, `git`)
+the preview shows a gray `SUBCOMMAND`; press `enter` to choose one, after which
+its own flags and positionals appear. The chosen verb stays focusable — `tab` to
+it and press `enter` to pick a different one (changing a higher level drops any
+deeper subcommand). The option list is scoped to the part of the command you're
+focused on: global flags at the top, a subcommand's flags once you focus into
+it. From any state you can run it, copy it to the clipboard, or print it.
+Running replaces the `flagpick` process with the wrapped command
+(`exec`), so after it exits you're back at your shell.
 
 ### Keymap
 
 | key                             | action                                             |
 | ------------------------------- | -------------------------------------------------- |
+| `tab` / `shift-tab`             | move focus between preview tokens                   |
+| `enter`                         | edit / activate the focused token                   |
 | any printable                   | fuzzy-filter the option list                        |
-| `ctrl-j` / `ctrl-k`, `up`/`down`| move the selection                                  |
+| `backspace`                     | delete the focused token / last filter char         |
+| `ctrl-w`                        | delete the last filter word                         |
+| `ctrl-j` / `ctrl-k`, `up`/`down`| move the option list selection                      |
 | `ctrl-d` / `ctrl-u`             | move half a page                                    |
 | `pgup` / `pgdown`               | scroll the description pane                         |
-| `space`                         | toggle a flag / edit a value / add a value           |
-| `space` on path                 | open the filesystem picker                          |
-| `space` on enum                 | open the value menu                                 |
-| `space` on command              | open the subcommand menu                            |
-| `space` on count                | cycle repeats (0–3)                                 |
-| `enter`                         | open the action menu (run / copy / print / cancel)  |
-| `ctrl-x` / `ctrl-shift-x`       | clear the selected entry / clear everything         |
-| `ctrl-shift-j` / `ctrl-shift-k` | reorder the selected flag (`ctrl-up`/`ctrl-down`)   |
-| `tab` / `shift-tab`             | cycle modes                                         |
-| `ctrl-r`                        | run                                                 |
+| `ctrl-x` / `ctrl-shift-x`       | clear the focused token / clear everything          |
+| `ctrl-shift-h` / `ctrl-shift-l` | reorder the focused flag                            |
+| `ctrl-n` / `ctrl-p`             | next / previous mode                                |
+| `ctrl-s`                        | run                                                 |
 | `ctrl-y` / `ctrl-shift-y`       | copy and exit / copy and stay                       |
-| `ctrl-p`                        | print after exiting                                 |
-| `ctrl-w`                        | delete the last filter word                         |
-| `esc`                           | clear filter, else open quit confirm                |
+| `ctrl-o`                        | print after exiting                                 |
+| `esc`                           | abort edit, else clear filter, else quit confirm    |
 | `ctrl-c`                        | quit immediately                                    |
 | `ctrl-?`                        | help overlay                                        |
 
@@ -119,7 +124,9 @@ file per command, named after the command (`config/rg.yaml` → `fp rg`).
 `make install-config` copies the repo's configs into the override dir.
 
 Bundled configs: [`rg`](config/rg.yaml) (ripgrep),
-[`direnv`](config/direnv.yaml), and [`git`](config/git.yaml).
+[`direnv`](config/direnv.yaml), [`git`](config/git.yaml), and
+[`fp`](config/fp.yaml) (flagpick itself — `fp fp` builds a `flagpick`
+command).
 
 The config format is documented in full in
 [`config/README.md`](config/README.md). Read that before writing or changing a
@@ -139,7 +146,9 @@ make install-config   # copy config/*.yaml into $XDG_CONFIG_HOME/flagpick
 
 `make install-config` puts your working copies in the override dir, so they win
 over anything downloaded. Edit `config/<command>.yaml`, re-run
-`make install-config`, and try it.
+`make install-config`, and try it. To undo it and fall back to the downloaded
+configs, run `make uninstall-config` (it removes only the files that live in
+`config/`, leaving any overrides you authored yourself).
 
 Before opening a PR:
 

@@ -29,41 +29,17 @@ func (m model) optionFor(name string) (Option, bool) {
 	return nil, false
 }
 
-// listOptions returns the active mode's options in the order written in the
-// mode's `options:` list, with flag slots filled in session emission order (so
-// reorder is visible) and filled options hoisted first.
+// listOptions returns the flags of the segment the focus is in, in config
+// order. Positionals are not listed (they are edited from the preview), and
+// filled flags are not hoisted: the preview is the source of truth for the
+// assembled command.
 func (m model) listOptions() []Option {
-	res := m.res()
-	byName := make(map[string]Flag, len(res.Flags))
-	for _, f := range res.Flags {
-		byName[f.OptName()] = f
+	flags := m.segmentFlags()
+	out := make([]Option, 0, len(flags))
+	for _, f := range flags {
+		out = append(out, f)
 	}
-
-	seq := append([]Option(nil), res.Options...)
-	// Fill flag slots in session order.
-	var ordered []Flag
-	for _, name := range m.session.Order {
-		if f, ok := byName[name]; ok {
-			ordered = append(ordered, f)
-		}
-	}
-	k := 0
-	for i, opt := range seq {
-		if _, isFlag := opt.(Flag); isFlag && k < len(ordered) {
-			seq[i] = ordered[k]
-			k++
-		}
-	}
-
-	var filled, empty []Option
-	for _, opt := range seq {
-		if m.isFilled(opt) {
-			filled = append(filled, opt)
-		} else {
-			empty = append(empty, opt)
-		}
-	}
-	return append(filled, empty...)
+	return out
 }
 
 func filterOptions(opts []Option, filter string) []Option {
@@ -104,66 +80,14 @@ func (m model) filtered() []Option {
 	return filterOptions(m.listOptions(), m.filter)
 }
 
-// rows expands the filtered options into selectable lines. A variadic
-// positional becomes one rowValue per value plus a trailing rowAdd.
+// rows maps the filtered options to one selectable row each.
 func (m model) rows() []row {
-	var rows []row
-	seenFilled := false
-	sepInserted := false
-	for _, opt := range m.filtered() {
-		filled := m.isFilled(opt)
-		if filled {
-			seenFilled = true
-		} else if seenFilled && !sepInserted {
-			rows = append(rows, row{kind: rowSep})
-			sepInserted = true
-		}
-		if m.isRepeatableOption(opt) {
-			for i, v := range m.optionValues(opt) {
-				rows = append(rows, row{opt: opt, kind: rowValue, valIdx: i, value: v})
-			}
-			rows = append(rows, row{opt: opt, kind: rowAdd})
-			continue
-		}
+	filtered := m.filtered()
+	rows := make([]row, 0, len(filtered))
+	for _, opt := range filtered {
 		rows = append(rows, row{opt: opt, kind: rowOption})
 	}
 	return rows
-}
-
-// isRepeatableOption reports whether opt expands into a list of values (a
-// variadic positional or a repeatable value flag).
-func (m model) isRepeatableOption(opt Option) bool {
-	switch o := opt.(type) {
-	case Positional:
-		return o.Variadic()
-	case Flag:
-		return o.Repeatable() && o.TakesValue()
-	}
-	return false
-}
-
-// optionValues returns the current values backing a repeatable option.
-func (m model) optionValues(opt Option) []string {
-	switch o := opt.(type) {
-	case Positional:
-		return m.session.PosVals[o.OptName()]
-	case Flag:
-		return m.session.Flags[o.OptName()].Values
-	}
-	return nil
-}
-
-// isFilled reports whether an option currently carries a value (checked bool,
-// non-empty value flag, or a positional with a value).
-func (m model) isFilled(opt Option) bool {
-	switch o := opt.(type) {
-	case Positional:
-		return hasValue(m.session.PosVals[o.OptName()])
-	case Flag:
-		fs := m.session.Flags[o.OptName()]
-		return fs.Checked || fs.Filled()
-	}
-	return false
 }
 
 func (m *model) moveCursor(delta int) {
@@ -177,7 +101,15 @@ func (m *model) moveCursor(delta int) {
 		}
 	}
 	if len(idx) == 0 {
-		m.cursor = 0
+		m.cursor = -1
+		return
+	}
+	if m.cursor < 0 {
+		if delta > 0 {
+			m.cursor = idx[0]
+		} else {
+			m.cursor = idx[len(idx)-1]
+		}
 		return
 	}
 	pos := 0
@@ -210,7 +142,15 @@ func (m *model) moveCursorClamped(delta int) {
 		}
 	}
 	if len(idx) == 0 {
-		m.cursor = 0
+		m.cursor = -1
+		return
+	}
+	if m.cursor < 0 {
+		if delta >= 0 {
+			m.cursor = idx[0]
+		} else {
+			m.cursor = idx[len(idx)-1]
+		}
 		return
 	}
 	pos := 0
@@ -237,7 +177,7 @@ func (m *model) setCursor(i int) {
 	list := m.rows()
 	n := len(list)
 	if n == 0 {
-		m.cursor = 0
+		m.cursor = -1
 		return
 	}
 	if i < 0 {
@@ -277,26 +217,9 @@ func (m model) selectedRow() (row, bool) {
 	return list[m.cursor], true
 }
 
-// isEnum reports whether opt is an enum flag or enum positional.
-func (m model) isEnum(opt Option) bool {
-	return opt.OptType() == KindEnum
-}
-
+// isPath reports whether opt is a path positional.
 func (m model) isPath(opt Option) bool {
 	return opt.OptType() == KindPath
-}
-
-// editableKind reports whether opt opens an inline text editor when activated,
-// as opposed to a menu or picker.
-func editableKind(opt Option) bool {
-	switch opt.OptType() {
-	case KindString, KindInt, KindSize:
-		return true
-	case KindEnum:
-		_, isFlag := opt.(Flag)
-		return isFlag
-	}
-	return false
 }
 
 // rowIndexOf returns the row index of the plain option named name, or 0 if it

@@ -2,7 +2,7 @@ description: Manages environment variables per directory.
 
 pool:
   options:
-    - {name: PATH_TO_RC,     kind: positional, type: string, required: false}
+    - {name: PATH_TO_RC,     kind: positional, type: string, required: true}
     - {name: DIR,            kind: positional, type: path,   required: true}
     - {name: ARGS,           kind: positional, type: passthrough, required: true}
     - name: Export shell
@@ -32,18 +32,18 @@ subcommands:
   - name: allow
     aliases: [permit, grant]
     description: Grants direnv permission to load the given .envrc or .env file.
-    usage: direnv allow [PATH_TO_RC]
+    usage: direnv allow PATH_TO_RC
     options: [PATH_TO_RC]
 
   - name: block
     aliases: [deny, disallow, revoke]
     description: Revokes the authorization of a given .envrc or .env file.
-    usage: direnv block [PATH_TO_RC]
+    usage: direnv block PATH_TO_RC
     options: [PATH_TO_RC]
 
   - name: edit
     description: Opens PATH_TO_RC or the current .envrc or .env into an $EDITOR and allows the file to be loaded afterwards.
-    usage: direnv edit [PATH_TO_RC]
+    usage: direnv edit PATH_TO_RC
     options: [PATH_TO_RC]
 
   - name: exec

@@ -2,67 +2,108 @@
 package main
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (m *model) activate() tea.Cmd {
-	r, ok := m.selectedRow()
+// activateToken activates a focused preview token.
+func (m *model) activateToken(t pvTok) tea.Cmd {
+	switch {
+	case t.flag != nil:
+		return m.activateFlag(t.flag, t.name, t.valIdx)
+	case t.pos != nil:
+		return m.activatePositional(t.pos, t.valIdx)
+	}
+	return nil
+}
+
+// activateOption activates the named flag or positional as if it were focused
+// from the empty-option slot.
+func (m *model) activateOption(name string) tea.Cmd {
+	opt, ok := m.optionFor(name)
 	if !ok {
 		return nil
 	}
-	switch r.kind {
-	case rowAdd:
-		if m.isPath(r.opt) {
-			return m.openPicker(r.opt.OptName(), -1)
-		}
-		if m.isEnum(r.opt) {
-			m.openEnum(r.opt.OptName(), -1)
-			return nil
-		}
-		m.beginEdit(r.opt.OptName(), -1, "", "+ "+r.opt.OptName()+": ")
-	case rowValue:
-		if m.isPath(r.opt) {
-			return m.openPicker(r.opt.OptName(), r.valIdx)
-		}
-		if m.isEnum(r.opt) {
-			m.openEnum(r.opt.OptName(), r.valIdx)
-			return nil
-		}
-		m.beginEdit(r.opt.OptName(), r.valIdx, r.value, valueLabel(r.opt.OptName(), r.valIdx))
-		return nil
-	}
-	switch v := r.opt.(type) {
-	case *SubcommandOption:
-		m.openSub(v.Level)
-	case *BoolFlag:
-		m.cycleBool(r.opt.OptName(), v.Negative() != "")
-		if !v.Repeatable() {
-			m.filter = ""
-			m.descScroll = 0
-			// The toggled flag may have moved into the checked group; keep
-			// the cursor on it.
-			m.cursor = m.rowIndexOf(r.opt.OptName())
-		}
-	case *StringPositional:
-		m.beginEdit(r.opt.OptName(), -1, firstValue(m.session.PosVals[r.opt.OptName()]), r.opt.OptName()+": ")
-	case *EnumFlag:
-		m.openEnum(r.opt.OptName(), -1)
-	case *EnumPositional:
-		m.openEnum(r.opt.OptName(), -1)
-	case *CountFlag:
-		state := m.session.Flags[r.opt.OptName()]
-		state.Count = (state.Count + 1) % 4
-		m.session.Flags[r.opt.OptName()] = state
-		m.setCursor(m.rowIndexOf(r.opt.OptName()))
-	case *StringFlag, *IntFlag, *SizeFlag:
-		m.beginEdit(r.opt.OptName(), -1, m.session.Flags[r.opt.OptName()].First(), r.opt.OptName()+": ")
-	case *PathPositional:
-		return m.openPicker(r.opt.OptName(), -1)
+	switch o := opt.(type) {
+	case Flag:
+		return m.activateFlag(o, name, -1)
+	case Positional:
+		return m.activatePositional(o, -1)
 	}
 	return nil
+}
+
+// activateFlag performs the per-type action for a flag.
+func (m *model) activateFlag(f Flag, name string, valIdx int) tea.Cmd {
+	switch v := f.(type) {
+	case *BoolFlag:
+		was := m.flagEnabled(name)
+		m.cycleBool(name, v.Negative() != "")
+		if !was && m.flagEnabled(name) {
+			m.appendFlagOrder(name)
+		}
+		m.resetFilter()
+		m.focusNamed(name)
+	case *CountFlag:
+		was := m.flagEnabled(name)
+		state := m.session.Flags[name]
+		state.Count = (state.Count + 1) % 4
+		m.session.Flags[name] = state
+		if !was && m.flagEnabled(name) {
+			m.appendFlagOrder(name)
+		}
+		m.resetFilter()
+		m.focusNamed(name)
+	case *EnumFlag:
+		m.openEnum(name, valIdx)
+	case *StringFlag, *IntFlag, *SizeFlag:
+		m.beginEdit(name, valIdx, m.session.Flags[name].First(), "")
+	}
+	return nil
+}
+
+// activatePositional performs the per-type action for a positional.
+func (m *model) activatePositional(p Positional, valIdx int) tea.Cmd {
+	switch v := p.(type) {
+	case *PathPositional:
+		return m.openPicker(v.OptName(), valIdx)
+	case *EnumPositional:
+		m.openEnum(v.OptName(), valIdx)
+	case *StringPositional, *PassthroughPositional:
+		m.beginEdit(v.OptName(), valIdx, firstValue(m.session.PosVals[v.OptName()]), "")
+	}
+	return nil
+}
+
+// removeFocusedToken clears the session state behind the focused emitted token
+// and returns focus to the empty-option slot.
+func (m *model) removeFocusedToken() {
+	t, ok := m.focusedToken()
+	if !ok || t.kind != pvEmitted {
+		return
+	}
+	switch {
+	case t.flag != nil:
+		state := m.session.Flags[t.name]
+		if _, isCount := t.flag.(*CountFlag); isCount {
+			state.Count = 0
+		} else if t.flag.Repeatable() && t.valIdx >= 0 && t.valIdx < len(state.Values) {
+			state.Values = append(state.Values[:t.valIdx], state.Values[t.valIdx+1:]...)
+		} else {
+			state = FlagState{}
+		}
+		m.session.Flags[t.name] = state
+	case t.pos != nil:
+		vals := m.session.PosVals[t.name]
+		if t.pos.Variadic() && t.valIdx >= 0 && t.valIdx < len(vals) {
+			m.session.PosVals[t.name] = append(vals[:t.valIdx], vals[t.valIdx+1:]...)
+		} else {
+			m.session.PosVals[t.name] = nil
+		}
+	}
+	m.cursor = 0
+	m.descScroll = 0
+	m.focusEmptySlot()
 }
 
 // isValueFlag reports whether name is a flag that takes a value.
@@ -108,6 +149,7 @@ func (m *model) commitEdit() {
 			m.errMsg = err.Error()
 			return
 		}
+		was := m.flagEnabled(name)
 		state := m.session.Flags[name]
 		if m.isRepeatableFlag(name) {
 			state.Values = editValueList(state.Values, m.editingIndex, val)
@@ -117,6 +159,9 @@ func (m *model) commitEdit() {
 			state.Values = []string{val}
 		}
 		m.session.Flags[name] = state
+		if !was && m.flagEnabled(name) {
+			m.appendFlagOrder(name)
+		}
 		return
 	}
 	vals := m.session.PosVals[name]
@@ -149,33 +194,6 @@ func (m *model) validateValue(name, val string) error {
 		return validateFlagValue(f, val)
 	}
 	return nil
-}
-
-// deleteValue removes the variadic value under the cursor. It is a no-op on
-// any other row.
-func (m *model) deleteValue() {
-	r, ok := m.selectedRow()
-	if !ok || r.kind != rowValue {
-		return
-	}
-	name := r.opt.OptName()
-	if f, ok := r.opt.(Flag); ok && f.Repeatable() {
-		state := m.session.Flags[name]
-		if r.valIdx < len(state.Values) {
-			state.Values = append(state.Values[:r.valIdx], state.Values[r.valIdx+1:]...)
-			m.session.Flags[name] = state
-		}
-	} else {
-		vals := m.session.PosVals[name]
-		if r.valIdx >= len(vals) {
-			return
-		}
-		m.session.PosVals[name] = append(vals[:r.valIdx], vals[r.valIdx+1:]...)
-	}
-	list := m.rows()
-	if m.cursor >= len(list) && m.cursor > 0 {
-		m.cursor--
-	}
 }
 
 // clearAll resets every option: unchecks bools, empties value flags, and
@@ -215,17 +233,21 @@ func (m *model) cycleBool(name string, nullable bool) {
 	}
 }
 
-// clearSelected empties the selected entry: a checked bool is unchecked (like
-// space), a text/number value is cleared, and a variadic value is deleted. It
-// is a no-op on an already-empty entry, the add row, and separators.
+// clearSelected empties the focused preview token if it is filled, otherwise
+// the Options-list selection: unchecks a bool, clears a value, or deletes a
+// variadic value.
 func (m *model) clearSelected() {
+	if t, ok := m.focusedToken(); ok && t.kind == pvEmitted && t.name != "" {
+		m.removeFocusedToken()
+		return
+	}
 	r, ok := m.selectedRow()
 	if !ok {
 		return
 	}
 	switch r.kind {
 	case rowValue:
-		m.deleteValue()
+		m.deleteListValue(r)
 		return
 	case rowAdd, rowSep:
 		return
@@ -263,20 +285,39 @@ func (m *model) clearSelected() {
 	m.setCursor(m.rowIndexOf(name))
 }
 
+// deleteListValue removes the variadic value under the Options-list cursor.
+func (m *model) deleteListValue(r row) {
+	name := r.opt.OptName()
+	if f, ok := r.opt.(Flag); ok && f.Repeatable() {
+		state := m.session.Flags[name]
+		if r.valIdx < len(state.Values) {
+			state.Values = append(state.Values[:r.valIdx], state.Values[r.valIdx+1:]...)
+			m.session.Flags[name] = state
+		}
+	} else {
+		vals := m.session.PosVals[name]
+		if r.valIdx >= len(vals) {
+			return
+		}
+		m.session.PosVals[name] = append(vals[:r.valIdx], vals[r.valIdx+1:]...)
+	}
+	list := m.rows()
+	if m.cursor >= len(list) && m.cursor > 0 {
+		m.cursor--
+	}
+}
+
 func (m model) isVariadic(name string) bool {
 	p, ok := m.cfg.positional(name)
 	return ok && p.Variadic()
 }
 
 func (m *model) reorder(delta int) {
-	r, ok := m.selectedRow()
-	if !ok {
+	t, ok := m.focusedToken()
+	if !ok || t.flag == nil || t.kind != pvEmitted {
 		return
 	}
-	if _, isFlag := r.opt.(Flag); !isFlag {
-		return
-	}
-	name := r.opt.OptName()
+	name := t.name
 	// Only applied (enabled) flags can be reordered; unapplied ones emit
 	// nothing, so moving them has no visible effect.
 	if !m.flagEnabled(name) {
@@ -305,8 +346,8 @@ func (m *model) reorder(delta int) {
 		return
 	}
 	m.session.Order[idx], m.session.Order[target] = m.session.Order[target], m.session.Order[idx]
-	// Keep the cursor on the moved flag as it changes position.
-	m.setCursor(m.rowIndexOf(name))
+	// Keep the focus on the moved flag as it changes position.
+	m.focusNamed(name)
 }
 
 // flagEnabled reports whether a flag currently contributes to the command.
@@ -318,33 +359,44 @@ func (m model) flagEnabled(name string) bool {
 	return fs.Checked || fs.Filled()
 }
 
+// appendFlagOrder moves name to the end of the emit order, so a newly added
+// flag lands after the flags already applied (and, since positionals always
+// follow flags, before the positionals).
+func (m *model) appendFlagOrder(name string) {
+	idx := -1
+	for i, n := range m.session.Order {
+		if n == name {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 || idx == len(m.session.Order)-1 {
+		return
+	}
+	m.session.Order = append(m.session.Order[:idx], m.session.Order[idx+1:]...)
+	m.session.Order = append(m.session.Order, name)
+}
+
+// resetFilter clears the option filter and its selection/scroll.
+func (m *model) resetFilter() {
+	m.filter = ""
+	m.cursor = -1
+	m.descScroll = 0
+}
+
 // isRepeatableFlag reports whether name is a repeatable value flag.
 func (m model) isRepeatableFlag(name string) bool {
 	f, ok := m.cfg.flag(name)
 	return ok && f.Repeatable() && f.TakesValue()
 }
 
-// validate checks the active path. If exactly one *mode alternative* of the
-// same subcommand accepts the current state and validates, it is adopted.
+// validate checks the active path; it sets errMsg with the reason on failure.
 func (m *model) validate() bool {
-	if modeIncludesApplied(m.res(), m.session) && len(MissingRequired(m.res(), m.session)) == 0 {
+	ok, reason := m.validity()
+	if ok {
 		return true
 	}
-	var valid []int
-	for _, i := range m.modeSiblings() {
-		if acceptsAt(m.modes, i, m.session) && len(MissingRequired(m.modes[i], m.session)) == 0 {
-			valid = append(valid, i)
-		}
-	}
-	if len(valid) == 1 {
-		m.mode = valid[0]
-		return true
-	}
-	if missing := MissingRequired(m.res(), m.session); len(missing) > 0 {
-		m.errMsg = "required: " + strings.Join(missing, ", ")
-	} else {
-		m.errMsg = "no mode matches the current options"
-	}
+	m.errMsg = reason
 	m.statusMsg = ""
 	return false
 }

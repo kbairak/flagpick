@@ -3,113 +3,75 @@ package main
 import (
 	"reflect"
 	"testing"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestReorder checks ctrl-shift-j/k (via the ctrl-up/down fallback) reorders
-// the selected flag.
+// TestReorder checks ctrl-shift-h/l (via CSI-u) reorders the focused flag.
 func TestReorder(t *testing.T) {
 	m := testModel(t)
 	m.session.Flags["Ignore case"] = FlagState{Checked: true}
 	m.session.Flags["Smart case"] = FlagState{Checked: true}
-	m.setCursor(m.rowIndexOf("Ignore case"))
+	m = focusPreviewToken(m, "Ignore case")
 
 	if len(m.session.Order) < 2 || m.session.Order[0] != "Ignore case" {
 		t.Fatalf("initial order = %v", m.session.Order)
 	}
-	down, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlDown})
+	down, _ := m.Update([]byte("\x1b[108;6u")) // ctrl+shift+l moves right
 	m = down.(model)
 	if m.session.Order[0] != "Smart case" || m.session.Order[1] != "Ignore case" {
-		t.Fatalf("after ctrl+down: %v", m.session.Order)
+		t.Fatalf("after ctrl+shift+l: %v", m.session.Order)
 	}
-	// The options list must reflect the reorder too.
-	var firstFlag string
-	for _, o := range m.listOptions() {
-		if _, ok := o.(*BoolFlag); ok {
-			firstFlag = o.OptName()
-			break
-		}
-	}
-	if firstFlag != "Smart case" {
-		t.Fatalf("first flag in list = %q, want Smart case", firstFlag)
-	}
-	m.setCursor(m.rowIndexOf("Ignore case"))
-	up, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyCtrlUp})
+	m = focusPreviewToken(m, "Ignore case")
+	up, _ := m.Update([]byte("\x1b[104;6u")) // ctrl+shift+h moves left
 	m = up.(model)
 	if m.session.Order[0] != "Ignore case" {
-		t.Fatalf("after ctrl+up: %v", m.session.Order)
+		t.Fatalf("after ctrl+shift+h: %v", m.session.Order)
 	}
 
 	// Reorder is ignored for unapplied flags.
 	m2 := testModel(t)
 	before := append([]string(nil), m2.session.Order...)
-	m2.setCursor(m2.rowIndexOf("Ignore case"))
-	ignored, _ := m2.handleKey(tea.KeyMsg{Type: tea.KeyCtrlDown})
-	m2 = ignored.(model)
+	m2.focusEmptySlot()
+	m2.reorder(1)
 	if !reflect.DeepEqual(m2.session.Order, before) {
 		t.Fatalf("unapplied reorder changed order: %v", m2.session.Order)
 	}
 }
 
-// TestFilledOptionsSortToTop checks that any filled option (positional or
-// flag, bool or value) is listed before empty ones.
-func TestFilledOptionsSortToTop(t *testing.T) {
+// TestNoHoisting checks that the option list stays in config order regardless
+// of which options are filled (no filled-first section).
+func TestNoHoisting(t *testing.T) {
 	m := testValueModel(t)
-	m.session.PosVals["PATTERN"] = []string{"foo"}
-	r := m.session.Flags["Replace"]
-	r.Values = []string{"x"}
-	m.session.Flags["Replace"] = r
-	a := m.session.Flags["After context"]
-	a.Values = []string{"2"}
-	m.session.Flags["After context"] = a
+	r := m.session.Flags["After context"]
+	r.Values = []string{"2"}
+	m.session.Flags["After context"] = r
 
 	var names []string
 	for _, o := range m.listOptions() {
 		names = append(names, o.OptName())
 	}
-	want := []string{"Replace", "After context", "PATTERN"}
-	for i, n := range want {
-		if i >= len(names) || names[i] != n {
-			t.Fatalf("listOptions = %v, want prefix %v", names, want)
-		}
-	}
-
-	// Clearing the value moves it back below the filled ones.
-	r.Values = []string{""}
-	m.session.Flags["Replace"] = r
-	names = names[:0]
-	for _, o := range m.listOptions() {
-		names = append(names, o.OptName())
-	}
-	if names[0] != "After context" || names[1] != "PATTERN" {
-		t.Fatalf("after clearing: %v, want After context, PATTERN first", names)
+	if want := []string{"Replace", "After context"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("listOptions = %v, want %v", names, want)
 	}
 }
 
-// TestCheckedFlagsSortToTop checks that checked booleans are grouped above
-// unchecked ones and that the cursor follows a flag as it moves.
-func TestCheckedFlagsSortToTop(t *testing.T) {
+// TestCheckedFlagStaysInPlace checks toggling a bool does not reorder the list
+// and the cursor is not left on any row.
+func TestCheckedFlagStaysInPlace(t *testing.T) {
 	m := testModel(t)
 	m.session.Flags["Smart case"] = FlagState{Checked: true}
 
-	m.setCursor(m.rowIndexOf("Ignore case"))
-	toggled, _ := m.handleKey(tea.KeyMsg{Type: tea.KeySpace})
-	m = toggled.(model)
-
+	m = addOption(m, "Ignore case")
 	if !m.session.Flags["Ignore case"].Checked {
 		t.Fatal("Ignore case was not checked")
 	}
-	if m.rows()[m.cursor].opt.OptName() != "Ignore case" {
-		t.Fatalf("cursor = %d, want Ignore case", m.cursor)
-	}
+	var flags []string
 	for _, o := range m.listOptions() {
 		if _, ok := o.(*BoolFlag); ok {
-			if o.OptName() != "Ignore case" {
-				t.Fatalf("first flag = %q, want Ignore case", o.OptName())
-			}
-			break
+			flags = append(flags, o.OptName())
 		}
+	}
+	if len(flags) < 2 || flags[0] != "Ignore case" || flags[1] != "Smart case" {
+		t.Fatalf("list order = %v, want config order [Ignore case Smart case]", flags)
 	}
 }
 
@@ -141,7 +103,7 @@ func TestConfigOrder(t *testing.T) {
 	for _, o := range m.listOptions() {
 		names = append(names, o.OptName())
 	}
-	want := []string{"Replace", "After context", "PATTERN"}
+	want := []string{"Replace", "After context"}
 	if !reflect.DeepEqual(names, want) {
 		t.Fatalf("listOptions = %v, want %v", names, want)
 	}
@@ -178,9 +140,9 @@ func TestCursorCycle(t *testing.T) {
 	}
 }
 
-// TestPositionalFirstConfig checks list order follows the config's options
-// order (positionals can lead).
-func TestPositionalFirstConfig(t *testing.T) {
+// TestPositionalExcludedFromList checks positionals are not listed (they are
+// edited from the preview); only flags appear, in config order.
+func TestPositionalExcludedFromList(t *testing.T) {
 	cfg, err := parseConfigBytes(t, []byte(`
 pool:
   options:
@@ -203,7 +165,7 @@ options: [P, F]
 	for _, o := range m.listOptions() {
 		names = append(names, o.OptName())
 	}
-	if !reflect.DeepEqual(names, []string{"P", "F"}) {
-		t.Fatalf("order = %v, want [P F]", names)
+	if !reflect.DeepEqual(names, []string{"F"}) {
+		t.Fatalf("order = %v, want [F]", names)
 	}
 }
