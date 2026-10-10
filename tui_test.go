@@ -16,6 +16,22 @@ func addOption(m model, name string) model {
 	return upd.(model)
 }
 
+// chooseSubOption sets the subcommand named name from the SUBCOMMAND token: it
+// focuses the token, filters to name, selects the first match, and presses
+// enter.
+func chooseSubOption(m model, name string) model {
+	for i, tk := range m.previewTokens() {
+		if tk.kind == pvSub {
+			m.focus = i
+			break
+		}
+	}
+	m.filter = name
+	m.syncFilterCursor()
+	upd, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	return upd.(model)
+}
+
 const tuiFixture = `pool:
   options:
     - name: Ignore case

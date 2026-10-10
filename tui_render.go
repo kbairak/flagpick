@@ -78,8 +78,6 @@ func (m model) View() string {
 		return m.confirmView()
 	case screenEnum:
 		return m.enumView()
-	case screenSub:
-		return m.subView()
 	case screenPicker:
 		return m.pickerView()
 	}
@@ -97,11 +95,16 @@ func (m model) View() string {
 }
 
 // optionsBox renders the Options pane: filter line and flag list, with the
-// title in the border. When a positional is focused the pane is empty
+// title in the border. When a subcommand token is focused the pane lists that
+// level's subcommands instead. When a positional is focused the pane is empty
 // (positionals are edited from the preview).
 func (m model) optionsBox(w, paneH int) string {
+	title := "Options"
+	if m.focusedIsSub() {
+		title = "Subcommands"
+	}
 	var body []string
-	if !m.focusedIsPositional() && !m.focusedIsSub() && len(m.segmentFlags()) > 0 {
+	if !m.focusedIsPositional() {
 		listMax := paneH
 		if paneH >= 2 {
 			body = append(body, dimStyle.Render(truncate("Filter: "+m.filter+"▏", w)))
@@ -111,7 +114,7 @@ func (m model) optionsBox(w, paneH int) string {
 			body = append(body, m.renderList(listMax, w))
 		}
 	}
-	return titledBox("Options", strings.Join(body, "\n"), w, paneH)
+	return titledBox(title, strings.Join(body, "\n"), w, paneH)
 }
 
 // descriptionBox renders the Description pane for the Options-list selection.
@@ -226,11 +229,11 @@ func (m model) renderDescription(width, maxLines int) string {
 	if maxLines < 1 {
 		maxLines = 1
 	}
-	opt, ok := m.descriptionOption()
+	opt, ok := m.descriptionText()
 	if !ok {
 		return dimStyle.Render(truncate("(none)", width))
 	}
-	desc := strings.TrimSpace(opt.OptDescription())
+	desc := strings.TrimSpace(opt)
 	if desc == "" {
 		return dimStyle.Render(truncate("(no description)", width))
 	}
@@ -317,6 +320,13 @@ func (m model) activeRow(row) bool { return false }
 func renderRow(m model, r row, content int) string {
 	if r.kind == rowSep {
 		return dimStyle.Render(strings.Repeat("─", content))
+	}
+	if r.kind == rowSub {
+		label := r.sub.Name
+		if len(r.sub.Aliases) > 0 {
+			label += " (" + strings.Join(r.sub.Aliases, ", ") + ")"
+		}
+		return truncate(label, content)
 	}
 	name := r.opt.OptName()
 	switch r.kind {

@@ -1,0 +1,1089 @@
+description: "An extremely fast Python package manager."
+usage: "uv [OPTIONS] <COMMAND>"
+pool:
+  options:
+    - {name: No Cache, kind: flag, type: bool, long: --no-cache, short: "-n", description: "Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation"}
+    - {name: Cache Dir, kind: flag, type: string, long: --cache-dir, description: "Path to the cache directory"}
+    - {name: Managed Python, kind: flag, type: bool, long: --managed-python, description: "Require use of uv-managed Python versions"}
+    - {name: No Managed Python, kind: flag, type: bool, long: --no-managed-python, description: "Disable use of uv-managed Python versions"}
+    - {name: No Python Downloads, kind: flag, type: bool, long: --no-python-downloads, description: "Disable automatic downloads of Python."}
+    - {name: Quiet, kind: flag, type: count, long: --quiet, short: "-q", description: "Use quiet output"}
+    - {name: Verbose, kind: flag, type: count, long: --verbose, short: "-v", description: "Use verbose output"}
+    - {name: Color, kind: flag, type: enum, long: --color, values: [auto, always, never], description: "Control the use of color in output"}
+    - {name: Native TLS, kind: flag, type: bool, long: --native-tls, description: "Whether to load TLS certificates from the platform's native certificate store"}
+    - {name: Offline, kind: flag, type: bool, long: --offline, description: "Disable network access"}
+    - {name: Allow Insecure Host, kind: flag, type: string, long: --allow-insecure-host, repeatable: true, description: "Allow insecure connections to a host"}
+    - {name: No Progress, kind: flag, type: bool, long: --no-progress, description: "Hide all progress outputs"}
+    - {name: Directory, kind: flag, type: string, long: --directory, description: "Change to the given directory prior to running the command"}
+    - {name: Project, kind: flag, type: string, long: --project, description: "Run the command within the given project directory"}
+    - {name: Config File, kind: flag, type: string, long: --config-file, description: "The path to a `uv.toml` file to use for configuration"}
+    - {name: No Config, kind: flag, type: bool, long: --no-config, description: "Avoid discovering configuration files (`pyproject.toml`, `uv.toml`)"}
+    - {name: Help, kind: flag, type: bool, long: --help, short: "-h", description: "Display the concise help for this command"}
+    - {name: Version, kind: flag, type: bool, long: --version, short: "-V", description: "Display the uv version Use `uv help` for more details."}
+options: [No Cache, Cache Dir, Managed Python, No Managed Python, No Python Downloads, Quiet, Verbose, Color, Native TLS, Offline, Allow Insecure Host, No Progress, Directory, Project, Config File, No Config, Help, Version]
+subcommands:
+  - name: run
+    description: "Run a command or script"
+    usage: "uv run [OPTIONS] [COMMAND]"
+    pool:
+      options:
+        - {name: Extra, kind: flag, type: string, long: --extra, description: "Include optional dependencies from the specified extra name"}
+        - {name: All Extras, kind: flag, type: bool, long: --all-extras, description: "Include all optional dependencies"}
+        - {name: No Extra, kind: flag, type: string, long: --no-extra, description: "Exclude the specified optional dependencies, if `--all-extras` is supplied"}
+        - {name: No Dev, kind: flag, type: bool, long: --no-dev, description: "Disable the development dependency group"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Include dependencies from the specified dependency group"}
+        - {name: No Group, kind: flag, type: string, long: --no-group, description: "Disable the specified dependency group"}
+        - {name: No Default Groups, kind: flag, type: bool, long: --no-default-groups, description: "Ignore the default dependency groups"}
+        - {name: Only Group, kind: flag, type: string, long: --only-group, description: "Only include dependencies from the specified dependency group"}
+        - {name: All Groups, kind: flag, type: bool, long: --all-groups, description: "Include dependencies from all dependency groups"}
+        - {name: Module, kind: flag, type: bool, long: --module, short: "-m", description: "Run a Python module"}
+        - {name: Only Dev, kind: flag, type: bool, long: --only-dev, description: "Only include the development dependency group"}
+        - {name: No Editable, kind: flag, type: bool, long: --no-editable, description: "Install any editable dependencies, including the project and any workspace members, as non-editable"}
+        - {name: Exact, kind: flag, type: bool, long: --exact, description: "Perform an exact sync, removing extraneous packages"}
+        - {name: Env File, kind: flag, type: string, long: --env-file, repeatable: true, description: "Load environment variables from a `.env` file"}
+        - {name: No Env File, kind: flag, type: bool, long: --no-env-file, description: "Avoid reading environment variables from a `.env` file"}
+        - {name: With, kind: flag, type: string, long: --with, short: "-w", repeatable: true, description: "Run with the given packages installed"}
+        - {name: With Editable, kind: flag, type: string, long: --with-editable, description: "Run with the given packages installed in editable mode"}
+        - {name: With Requirements, kind: flag, type: string, long: --with-requirements, description: "Run with all packages listed in the given `requirements.txt` files"}
+        - {name: Isolated, kind: flag, type: bool, long: --isolated, description: "Run the command in an isolated virtual environment"}
+        - {name: Active, kind: flag, type: bool, long: --active, description: "Prefer the active virtual environment over the project's virtual environment"}
+        - {name: No Sync, kind: flag, type: bool, long: --no-sync, description: "Avoid syncing the virtual environment"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Run without updating the `uv.lock` file"}
+        - {name: Script, kind: flag, type: bool, long: --script, short: "-s", description: "Run the given path as a Python script"}
+        - {name: GUI Script, kind: flag, type: bool, long: --gui-script, description: "Run the given path as a Python GUI script"}
+        - {name: All Packages, kind: flag, type: bool, long: --all-packages, description: "Run the command with all workspace members installed"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Run the command in a specific package in the workspace"}
+        - {name: No Project, kind: flag, type: bool, long: --no-project, description: "Avoid discovering the project or workspace"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+        - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for the run environment."}
+        - {name: COMMAND, kind: positional, type: passthrough}
+    options: [Extra, All Extras, No Extra, No Dev, Group, No Group, No Default Groups, Only Group, All Groups, Module, Only Dev, No Editable, Exact, Env File, No Env File, With, With Editable, With Requirements, Isolated, Active, No Sync, Locked, Frozen, Script, GUI Script, All Packages, Package, No Project, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, COMMAND]
+  - name: init
+    description: "Create a new project"
+    usage: "uv init [OPTIONS] [PATH]"
+    pool:
+      options:
+        - {name: Name, kind: flag, type: string, long: --name, description: "The name of the project"}
+        - {name: Bare, kind: flag, type: bool, long: --bare, description: "Only create a `pyproject.toml`"}
+        - {name: Package, kind: flag, type: bool, long: --package, description: "Set up the project to be built as a Python package"}
+        - {name: No Package, kind: flag, type: bool, long: --no-package, description: "Do not set up the project to be built as a Python package"}
+        - {name: App, kind: flag, type: bool, long: --app, description: "Create a project for an application"}
+        - {name: Lib, kind: flag, type: bool, long: --lib, description: "Create a project for a library"}
+        - {name: Script, kind: flag, type: bool, long: --script, description: "Create a script"}
+        - {name: Description, kind: flag, type: string, long: --description, description: "Set the project description"}
+        - {name: No Description, kind: flag, type: bool, long: --no-description, description: "Disable the description for the project"}
+        - {name: VCS, kind: flag, type: enum, long: --vcs, values: [git, none], description: "Initialize a version control system for the project"}
+        - {name: Build Backend, kind: flag, type: enum, long: --build-backend, values: [hatch, flit, pdm, poetry, setuptools, maturin, scikit], description: "Initialize a build-backend of choice for the project"}
+        - {name: No Readme, kind: flag, type: bool, long: --no-readme, description: "Do not create a `README.md` file"}
+        - {name: Author From, kind: flag, type: enum, long: --author-from, values: [auto, git, none], description: "Fill in the `authors` field in the `pyproject.toml`"}
+        - {name: No Pin Python, kind: flag, type: bool, long: --no-pin-python, description: "Do not create a `.python-version` file for the project"}
+        - {name: No Workspace, kind: flag, type: bool, long: --no-workspace, description: "Avoid discovering a workspace and create a standalone project"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use to determine the minimum supported Python version."}
+        - {name: PATH, kind: positional, type: string, description: "The path to use for the project/script"}
+    options: [Name, Bare, Package, No Package, App, Lib, Script, Description, No Description, VCS, Build Backend, No Readme, Author From, No Pin Python, No Workspace, Python, PATH]
+  - name: add
+    description: "Add dependencies to the project"
+    usage: "uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>"
+    pool:
+      options:
+        - {name: Requirements, kind: flag, type: string, long: --requirements, short: "-r", repeatable: true, description: "Add all packages listed in the given `requirements.txt` files"}
+        - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+        - {name: Marker, kind: flag, type: string, long: --marker, short: "-m", description: "Apply this marker to all added packages"}
+        - {name: Dev, kind: flag, type: bool, long: --dev, description: "Add the requirements to the development dependency group"}
+        - {name: Optional, kind: flag, type: string, long: --optional, repeatable: true, description: "Add the requirements to the package's optional dependencies for the specified extra"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Add the requirements to the specified dependency group"}
+        - {name: Editable, kind: flag, type: bool, long: --editable, description: "Add the requirements as editable"}
+        - {name: Raw, kind: flag, type: bool, long: --raw, description: "Add a dependency as provided"}
+        - {name: Bounds, kind: flag, type: enum, long: --bounds, values: [lower, major, minor, exact], description: "The kind of version specifier to use when adding dependencies"}
+        - {name: Rev, kind: flag, type: string, long: --rev, description: "Commit to use when adding a dependency from Git"}
+        - {name: Tag, kind: flag, type: string, long: --tag, description: "Tag to use when adding a dependency from Git"}
+        - {name: Branch, kind: flag, type: string, long: --branch, description: "Branch to use when adding a dependency from Git"}
+        - {name: Extra, kind: flag, type: string, long: --extra, description: "Extras to enable for the dependency"}
+        - {name: No Sync, kind: flag, type: bool, long: --no-sync, description: "Avoid syncing the virtual environment"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Add dependencies without re-locking the project"}
+        - {name: Active, kind: flag, type: bool, long: --active, description: "Prefer the active virtual environment over the project's virtual environment"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Add the dependency to a specific package in the workspace"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Add the dependency to the specified Python script, rather than to a project"}
+        - {name: Workspace, kind: flag, type: bool, long: --workspace, description: "Add the dependency as a workspace member"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+        - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for resolving and syncing."}
+        - {name: PACKAGES, kind: positional, type: string, variadic: true, description: "The packages to add, as PEP 508 requirements (e.g., `ruff==0.5.0`)"}
+    options: [Requirements, Constraints, Marker, Dev, Optional, Group, Editable, Raw, Bounds, Rev, Tag, Branch, Extra, No Sync, Locked, Frozen, Active, Package, Script, Workspace, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, PACKAGES]
+  - name: remove
+    description: "Remove dependencies from the project"
+    usage: "uv remove [OPTIONS] <PACKAGES>..."
+    pool:
+      options:
+        - {name: Dev, kind: flag, type: bool, long: --dev, description: "Remove the packages from the development dependency group"}
+        - {name: Optional, kind: flag, type: string, long: --optional, repeatable: true, description: "Remove the packages from the project's optional dependencies for the specified extra"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Remove the packages from the specified dependency group"}
+        - {name: No Sync, kind: flag, type: bool, long: --no-sync, description: "Avoid syncing the virtual environment after re-locking the project"}
+        - {name: Active, kind: flag, type: bool, long: --active, description: "Prefer the active virtual environment over the project's virtual environment"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Remove dependencies without re-locking the project"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Remove the dependencies from a specific package in the workspace"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Remove the dependency from the specified Python script, rather than from a project"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+        - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for resolving and syncing."}
+        - {name: PACKAGES, kind: positional, type: string, required: true, variadic: true, description: "The names of the dependencies to remove (e.g., `ruff`)"}
+    options: [Dev, Optional, Group, No Sync, Active, Locked, Frozen, Package, Script, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, PACKAGES]
+  - name: version
+    description: "Read or update the project's version"
+    usage: "uv version [OPTIONS] [VALUE]"
+    pool:
+      options:
+        - {name: Bump, kind: flag, type: enum, long: --bump, values: [major, minor, patch, stable, alpha, beta, rc, post, dev], description: "Update the project version using the given semantics"}
+        - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Don't write a new version to the `pyproject.toml`"}
+        - {name: Short, kind: flag, type: bool, long: --short, description: "Only show the version"}
+        - {name: Output Format, kind: flag, type: enum, long: --output-format, values: [text, json], description: "The format of the output"}
+        - {name: No Sync, kind: flag, type: bool, long: --no-sync, description: "Avoid syncing the virtual environment after re-locking the project"}
+        - {name: Active, kind: flag, type: bool, long: --active, description: "Prefer the active virtual environment over the project's virtual environment"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Update the version without re-locking the project"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Update the version of a specific package in the workspace"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+        - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for resolving and syncing."}
+        - {name: VALUE, kind: positional, type: string, description: "Set the project version to this value"}
+    options: [Bump, Dry Run, Short, Output Format, No Sync, Active, Locked, Frozen, Package, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, VALUE]
+  - name: sync
+    description: "Update the project's environment"
+    usage: "uv sync [OPTIONS]"
+    pool:
+      options:
+        - {name: Extra, kind: flag, type: string, long: --extra, description: "Include optional dependencies from the specified extra name"}
+        - {name: Output Format, kind: flag, type: enum, long: --output-format, values: [text, json], description: "Select the output format"}
+        - {name: All Extras, kind: flag, type: bool, long: --all-extras, description: "Include all optional dependencies"}
+        - {name: No Extra, kind: flag, type: string, long: --no-extra, description: "Exclude the specified optional dependencies, if `--all-extras` is supplied"}
+        - {name: No Dev, kind: flag, type: bool, long: --no-dev, description: "Disable the development dependency group"}
+        - {name: Only Dev, kind: flag, type: bool, long: --only-dev, description: "Only include the development dependency group"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Include dependencies from the specified dependency group"}
+        - {name: No Group, kind: flag, type: string, long: --no-group, description: "Disable the specified dependency group"}
+        - {name: No Default Groups, kind: flag, type: bool, long: --no-default-groups, description: "Ignore the default dependency groups"}
+        - {name: Only Group, kind: flag, type: string, long: --only-group, description: "Only include dependencies from the specified dependency group"}
+        - {name: All Groups, kind: flag, type: bool, long: --all-groups, description: "Include dependencies from all dependency groups"}
+        - {name: No Editable, kind: flag, type: bool, long: --no-editable, description: "Install any editable dependencies, including the project and any workspace members, as non-editable"}
+        - {name: Inexact, kind: flag, type: bool, long: --inexact, description: "Do not remove extraneous packages present in the environment"}
+        - {name: Active, kind: flag, type: bool, long: --active, description: "Sync dependencies to the active virtual environment"}
+        - {name: No Install Project, kind: flag, type: bool, long: --no-install-project, description: "Do not install the current project"}
+        - {name: No Install Workspace, kind: flag, type: bool, long: --no-install-workspace, description: "Do not install any workspace members, including the root project"}
+        - {name: No Install Package, kind: flag, type: string, long: --no-install-package, description: "Do not install the given package(s)"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Sync without updating the `uv.lock` file"}
+        - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Perform a dry run, without writing the lockfile or modifying the project environment"}
+        - {name: All Packages, kind: flag, type: bool, long: --all-packages, description: "Sync all packages in the workspace"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Sync for a specific package in the workspace"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Sync the environment for a Python script, rather than the current project"}
+        - {name: Python Platform, kind: flag, type: enum, long: --python-platform, values: [windows, linux, macos, x86_64-pc-windows-msvc, i686-pc-windows-msvc, x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl, x86_64-unknown-linux-musl, x86_64-manylinux2014, x86_64-manylinux_2_17, x86_64-manylinux_2_28, x86_64-manylinux_2_31, x86_64-manylinux_2_32, x86_64-manylinux_2_33, x86_64-manylinux_2_34, x86_64-manylinux_2_35, x86_64-manylinux_2_36, x86_64-manylinux_2_37, x86_64-manylinux_2_38, x86_64-manylinux_2_39, x86_64-manylinux_2_40, aarch64-manylinux2014, aarch64-manylinux_2_17, aarch64-manylinux_2_28, aarch64-manylinux_2_31, aarch64-manylinux_2_32, aarch64-manylinux_2_33, aarch64-manylinux_2_34, aarch64-manylinux_2_35, aarch64-manylinux_2_36, aarch64-manylinux_2_37, aarch64-manylinux_2_38, aarch64-manylinux_2_39, aarch64-manylinux_2_40, wasm32-pyodide2024], description: "The platform for which requirements should be installed"}
+        - {name: Check, kind: flag, type: bool, long: --check, description: "Check if the Python environment is synchronized with the project"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+        - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for the project environment."}
+    options: [Extra, Output Format, All Extras, No Extra, No Dev, Only Dev, Group, No Group, No Default Groups, Only Group, All Groups, No Editable, Inexact, Active, No Install Project, No Install Workspace, No Install Package, Locked, Frozen, Dry Run, All Packages, Package, Script, Python Platform, Check, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python]
+  - name: lock
+    description: "Update the project's lockfile"
+    usage: "uv lock [OPTIONS]"
+    pool:
+      options:
+        - {name: Check, kind: flag, type: bool, long: --check, description: "Check if the lockfile is up-to-date"}
+        - {name: Check Exists, kind: flag, type: bool, long: --check-exists, description: "Assert that a `uv.lock` exists without checking if it is up-to-date"}
+        - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Perform a dry run, without writing the lockfile"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Lock the specified Python script, rather than the current project"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use during resolution."}
+    options: [Check, Check Exists, Dry Run, Script, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Link Mode, Refresh, Refresh Package, Python]
+  - name: export
+    description: "Export the project's lockfile to an alternate format"
+    usage: "uv export [OPTIONS]"
+    pool:
+      options:
+        - {name: Format, kind: flag, type: enum, long: --format, values: [requirements.txt, pylock.toml], description: "The format to which `uv.lock` should be exported"}
+        - {name: All Packages, kind: flag, type: bool, long: --all-packages, description: "Export the entire workspace"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Export the dependencies for a specific package in the workspace"}
+        - {name: Prune, kind: flag, type: string, long: --prune, description: "Prune the given package from the dependency tree"}
+        - {name: Extra, kind: flag, type: string, long: --extra, description: "Include optional dependencies from the specified extra name"}
+        - {name: All Extras, kind: flag, type: bool, long: --all-extras, description: "Include all optional dependencies"}
+        - {name: No Extra, kind: flag, type: string, long: --no-extra, description: "Exclude the specified optional dependencies, if `--all-extras` is supplied"}
+        - {name: No Dev, kind: flag, type: bool, long: --no-dev, description: "Disable the development dependency group"}
+        - {name: Only Dev, kind: flag, type: bool, long: --only-dev, description: "Only include the development dependency group"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Include dependencies from the specified dependency group"}
+        - {name: No Group, kind: flag, type: string, long: --no-group, description: "Disable the specified dependency group"}
+        - {name: No Default Groups, kind: flag, type: bool, long: --no-default-groups, description: "Ignore the default dependency groups"}
+        - {name: Only Group, kind: flag, type: string, long: --only-group, description: "Only include dependencies from the specified dependency group"}
+        - {name: All Groups, kind: flag, type: bool, long: --all-groups, description: "Include dependencies from all dependency groups"}
+        - {name: No Annotate, kind: flag, type: bool, long: --no-annotate, description: "Exclude comment annotations indicating the source of each package"}
+        - {name: No Header, kind: flag, type: bool, long: --no-header, description: "Exclude the comment header at the top of the generated output file"}
+        - {name: No Editable, kind: flag, type: bool, long: --no-editable, description: "Export any editable dependencies, including the project and any workspace members, as non-editable"}
+        - {name: No Hashes, kind: flag, type: bool, long: --no-hashes, description: "Omit hashes in the generated output"}
+        - {name: Output File, kind: flag, type: string, long: --output-file, short: "-o", description: "Write the exported requirements to the given file"}
+        - {name: No Emit Project, kind: flag, type: bool, long: --no-emit-project, description: "Do not emit the current project"}
+        - {name: No Emit Workspace, kind: flag, type: bool, long: --no-emit-workspace, description: "Do not emit any workspace members, including the root project"}
+        - {name: No Emit Package, kind: flag, type: string, long: --no-emit-package, repeatable: true, description: "Do not emit the given package(s)"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Do not update the `uv.lock` before exporting"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Export the dependencies for the specified PEP 723 Python script, rather than the current project"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use during resolution."}
+    options: [Format, All Packages, Package, Prune, Extra, All Extras, No Extra, No Dev, Only Dev, Group, No Group, No Default Groups, Only Group, All Groups, No Annotate, No Header, No Editable, No Hashes, Output File, No Emit Project, No Emit Workspace, No Emit Package, Locked, Frozen, Script, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Link Mode, Refresh, Refresh Package, Python]
+  - name: tree
+    description: "Display the project's dependency tree"
+    usage: "uv tree [OPTIONS]"
+    pool:
+      options:
+        - {name: Universal, kind: flag, type: bool, long: --universal, description: "Show a platform-independent dependency tree"}
+        - {name: Depth, kind: flag, type: string, long: --depth, short: "-d", description: "Maximum display depth of the dependency tree"}
+        - {name: Prune, kind: flag, type: string, long: --prune, description: "Prune the given package from the display of the dependency tree"}
+        - {name: Package, kind: flag, type: string, long: --package, description: "Display only the specified packages"}
+        - {name: No Dedupe, kind: flag, type: bool, long: --no-dedupe, description: "Do not de-duplicate repeated dependencies. Usually, when a package has already displayed its dependencies, further occurrences will not re-display its dependencies, and will include a (*) to indicate it has already been shown. This flag will cause those duplicates to be repeated"}
+        - {name: Invert, kind: flag, type: bool, long: --invert, description: "Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package"}
+        - {name: Outdated, kind: flag, type: bool, long: --outdated, description: "Show the latest available version of each package in the tree"}
+        - {name: Only Dev, kind: flag, type: bool, long: --only-dev, description: "Only include the development dependency group"}
+        - {name: No Dev, kind: flag, type: bool, long: --no-dev, description: "Disable the development dependency group"}
+        - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Include dependencies from the specified dependency group"}
+        - {name: No Group, kind: flag, type: string, long: --no-group, description: "Disable the specified dependency group"}
+        - {name: No Default Groups, kind: flag, type: bool, long: --no-default-groups, description: "Ignore the default dependency groups"}
+        - {name: Only Group, kind: flag, type: string, long: --only-group, description: "Only include dependencies from the specified dependency group"}
+        - {name: All Groups, kind: flag, type: bool, long: --all-groups, description: "Include dependencies from all dependency groups"}
+        - {name: Locked, kind: flag, type: bool, long: --locked, description: "Assert that the `uv.lock` will remain unchanged"}
+        - {name: Frozen, kind: flag, type: bool, long: --frozen, description: "Display the requirements without locking the project"}
+        - {name: Script, kind: flag, type: string, long: --script, description: "Show the dependency tree the specified PEP 723 Python script, rather than the current project"}
+        - {name: Python Version, kind: flag, type: string, long: --python-version, description: "The Python version to use when filtering the tree"}
+        - {name: Python Platform, kind: flag, type: enum, long: --python-platform, values: [windows, linux, macos, x86_64-pc-windows-msvc, i686-pc-windows-msvc, x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl, x86_64-unknown-linux-musl, x86_64-manylinux2014, x86_64-manylinux_2_17, x86_64-manylinux_2_28, x86_64-manylinux_2_31, x86_64-manylinux_2_32, x86_64-manylinux_2_33, x86_64-manylinux_2_34, x86_64-manylinux_2_35, x86_64-manylinux_2_36, x86_64-manylinux_2_37, x86_64-manylinux_2_38, x86_64-manylinux_2_39, x86_64-manylinux_2_40, aarch64-manylinux2014, aarch64-manylinux_2_17, aarch64-manylinux_2_28, aarch64-manylinux_2_31, aarch64-manylinux_2_32, aarch64-manylinux_2_33, aarch64-manylinux_2_34, aarch64-manylinux_2_35, aarch64-manylinux_2_36, aarch64-manylinux_2_37, aarch64-manylinux_2_38, aarch64-manylinux_2_39, aarch64-manylinux_2_40, wasm32-pyodide2024], description: "The platform to use when filtering the tree"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for locking and filtering."}
+    options: [Universal, Depth, Prune, Package, No Dedupe, Invert, Outdated, Only Dev, No Dev, Group, No Group, No Default Groups, Only Group, All Groups, Locked, Frozen, Script, Python Version, Python Platform, No Build, No Build Package, No Binary, No Binary Package, Config Setting, No Build Isolation, No Build Isolation Package, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Link Mode, Python]
+  - name: tool
+    description: "Run and install commands provided by Python packages"
+    usage: "uv tool [OPTIONS] <COMMAND>"
+    subcommands:
+      - name: run
+        description: "Run a command provided by a Python package"
+        usage: "uv tool run [OPTIONS] [COMMAND]"
+        pool:
+          options:
+            - {name: From, kind: flag, type: string, long: --from, description: "Use the given package to provide the command"}
+            - {name: With, kind: flag, type: string, long: --with, short: "-w", repeatable: true, description: "Run with the given packages installed"}
+            - {name: With Editable, kind: flag, type: string, long: --with-editable, description: "Run with the given packages installed in editable mode"}
+            - {name: With Requirements, kind: flag, type: string, long: --with-requirements, description: "Run with all packages listed in the given `requirements.txt` files"}
+            - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+            - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building source distributions"}
+            - {name: Overrides, kind: flag, type: string, long: --overrides, description: "Override versions using the given requirements files"}
+            - {name: Isolated, kind: flag, type: bool, long: --isolated, description: "Run the tool in an isolated virtual environment, ignoring any already-installed tools"}
+            - {name: Env File, kind: flag, type: string, long: --env-file, repeatable: true, description: "Load environment variables from a `.env` file"}
+            - {name: No Env File, kind: flag, type: bool, long: --no-env-file, description: "Avoid reading environment variables from a `.env` file"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+            - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+            - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+            - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+            - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+            - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+            - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+            - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+            - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use to build the run environment."}
+            - {name: COMMAND, kind: positional, type: passthrough}
+        options: [From, With, With Editable, With Requirements, Constraints, Build Constraints, Overrides, Isolated, Env File, No Env File, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, COMMAND]
+      - name: install
+        description: "Install commands provided by a Python package"
+        usage: "uv tool install [OPTIONS] <PACKAGE>"
+        pool:
+          options:
+            - {name: With, kind: flag, type: string, long: --with, short: "-w", repeatable: true, description: "Include the following additional requirements"}
+            - {name: With Requirements, kind: flag, type: string, long: --with-requirements, description: "Include all requirements listed in the given `requirements.txt` files"}
+            - {name: Editable, kind: flag, type: bool, long: --editable, short: "-e", description: "Install the target package in editable mode, such that changes in the package's source directory are reflected without reinstallation"}
+            - {name: With Editable, kind: flag, type: string, long: --with-editable, description: "Include the given packages in editable mode"}
+            - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+            - {name: Overrides, kind: flag, type: string, long: --overrides, description: "Override versions using the given requirements files"}
+            - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building source distributions"}
+            - {name: Force, kind: flag, type: bool, long: --force, description: "Force installation of the tool"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+            - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+            - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+            - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+            - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+            - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+            - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+            - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+            - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use to build the tool environment."}
+            - {name: PACKAGE, kind: positional, type: string, required: true, description: "The package to install commands from"}
+        options: [With, With Requirements, Editable, With Editable, Constraints, Overrides, Build Constraints, Force, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Refresh, Refresh Package, Python, PACKAGE]
+      - name: upgrade
+        description: "Upgrade installed tools"
+        usage: "uv tool upgrade [OPTIONS] <NAME>..."
+        pool:
+          options:
+            - {name: All, kind: flag, type: bool, long: --all, description: "Upgrade all tools"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "Upgrade a tool, and specify it to use the given Python interpreter to build its environment. Use with `--all` to apply to all tools."}
+            - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+            - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+            - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+            - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+            - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+            - {name: NAME, kind: positional, type: string, required: true, variadic: true, description: "The name of the tool to upgrade, along with an optional version specifier"}
+        options: [All, Python, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, NAME]
+      - name: list
+        description: "List installed tools"
+        usage: "uv tool list [OPTIONS]"
+        pool:
+          options:
+            - {name: Show Paths, kind: flag, type: bool, long: --show-paths, description: "Whether to display the path to each tool environment and installed executable"}
+            - {name: Show Version Specifiers, kind: flag, type: bool, long: --show-version-specifiers, description: "Whether to display the version specifier(s) used to install each tool"}
+            - {name: Show With, kind: flag, type: bool, long: --show-with, description: "Whether to display the additional requirements installed with each tool"}
+            - {name: Show Extras, kind: flag, type: bool, long: --show-extras, description: "Whether to display the extra requirements installed with each tool"}
+        options: [Show Paths, Show Version Specifiers, Show With, Show Extras]
+      - name: uninstall
+        description: "Uninstall a tool"
+        usage: "uv tool uninstall [OPTIONS] <NAME>..."
+        pool:
+          options:
+            - {name: All, kind: flag, type: bool, long: --all, description: "Uninstall all tools"}
+            - {name: NAME, kind: positional, type: string, required: true, variadic: true, description: "The name of the tool to uninstall"}
+        options: [All, NAME]
+      - name: update-shell
+        description: "Ensure that the tool executable directory is on the `PATH`"
+        usage: "uv tool update-shell [OPTIONS]"
+      - name: dir
+        description: "Show the path to the uv tools directory"
+        usage: "uv tool dir [OPTIONS]"
+        pool:
+          options:
+            - {name: Bin, kind: flag, type: bool, long: --bin, description: "Show the directory into which `uv tool` will install executables."}
+        options: [Bin]
+  - name: python
+    description: "Manage Python versions and installations"
+    usage: "uv python [OPTIONS] <COMMAND>"
+    subcommands:
+      - name: list
+        description: "List the available Python installations"
+        usage: "uv python list [OPTIONS] [REQUEST]"
+        pool:
+          options:
+            - {name: All Versions, kind: flag, type: bool, long: --all-versions, description: "List all Python versions, including old patch versions"}
+            - {name: All Platforms, kind: flag, type: bool, long: --all-platforms, description: "List Python downloads for all platforms"}
+            - {name: All Arches, kind: flag, type: bool, long: --all-arches, description: "List Python downloads for all architectures"}
+            - {name: Only Installed, kind: flag, type: bool, long: --only-installed, description: "Only show installed Python versions"}
+            - {name: Only Downloads, kind: flag, type: bool, long: --only-downloads, description: "Only show available Python downloads"}
+            - {name: Show Urls, kind: flag, type: bool, long: --show-urls, description: "Show the URLs of available Python downloads"}
+            - {name: Output Format, kind: flag, type: enum, long: --output-format, values: [text, json], description: "Select the output format"}
+            - {name: Python Downloads JSON URL, kind: flag, type: string, long: --python-downloads-json-url, description: "URL pointing to JSON of custom Python installations"}
+            - {name: REQUEST, kind: positional, type: string, description: "A Python request to filter by"}
+        options: [All Versions, All Platforms, All Arches, Only Installed, Only Downloads, Show Urls, Output Format, Python Downloads JSON URL, REQUEST]
+      - name: install
+        description: "Download and install Python versions"
+        usage: "uv python install [OPTIONS] [TARGETS]..."
+        pool:
+          options:
+            - {name: Install Dir, kind: flag, type: string, long: --install-dir, short: "-i", description: "The directory to store the Python installation in"}
+            - {name: Mirror, kind: flag, type: string, long: --mirror, description: "Set the URL to use as the source for downloading Python installations"}
+            - {name: Pypy Mirror, kind: flag, type: string, long: --pypy-mirror, description: "Set the URL to use as the source for downloading PyPy installations"}
+            - {name: Python Downloads JSON URL, kind: flag, type: string, long: --python-downloads-json-url, description: "URL pointing to JSON of custom Python installations"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, short: "-r", description: "Reinstall the requested Python version, if it's already installed"}
+            - {name: Force, kind: flag, type: bool, long: --force, short: "-f", description: "Replace existing Python executables during installation"}
+            - {name: Default, kind: flag, type: bool, long: --default, description: "Use as the default Python version"}
+            - {name: TARGETS, kind: positional, type: string, variadic: true, description: "The Python version(s) to install"}
+        options: [Install Dir, Mirror, Pypy Mirror, Python Downloads JSON URL, Reinstall, Force, Default, TARGETS]
+      - name: upgrade
+        description: "Upgrade installed Python versions to the latest supported patch release (requires the `--preview`"
+        usage: "uv python upgrade [OPTIONS] [TARGETS]..."
+        pool:
+          options:
+            - {name: Install Dir, kind: flag, type: string, long: --install-dir, short: "-i", description: "The directory Python installations are stored in"}
+            - {name: Mirror, kind: flag, type: string, long: --mirror, description: "Set the URL to use as the source for downloading Python installations"}
+            - {name: Pypy Mirror, kind: flag, type: string, long: --pypy-mirror, description: "Set the URL to use as the source for downloading PyPy installations"}
+            - {name: Python Downloads JSON URL, kind: flag, type: string, long: --python-downloads-json-url, description: "URL pointing to JSON of custom Python installations"}
+            - {name: TARGETS, kind: positional, type: string, variadic: true, description: "The Python minor version(s) to upgrade"}
+        options: [Install Dir, Mirror, Pypy Mirror, Python Downloads JSON URL, TARGETS]
+      - name: find
+        description: "Search for a Python installation"
+        usage: "uv python find [OPTIONS] [REQUEST]"
+        pool:
+          options:
+            - {name: No Project, kind: flag, type: bool, long: --no-project, description: "Avoid discovering a project or workspace"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Only find system Python interpreters"}
+            - {name: Script, kind: flag, type: string, long: --script, description: "Find the environment for a Python script, rather than the current project"}
+            - {name: Show Version, kind: flag, type: bool, long: --show-version, description: "Show the Python version that would be used instead of the path to the interpreter"}
+            - {name: REQUEST, kind: positional, type: string, description: "The Python request"}
+        options: [No Project, System, Script, Show Version, REQUEST]
+      - name: pin
+        description: "Pin to a specific Python version"
+        usage: "uv python pin [OPTIONS] [REQUEST]"
+        pool:
+          options:
+            - {name: Resolved, kind: flag, type: bool, long: --resolved, description: "Write the resolved Python interpreter path instead of the request"}
+            - {name: No Project, kind: flag, type: bool, long: --no-project, description: "Avoid validating the Python pin is compatible with the project or workspace"}
+            - {name: Global, kind: flag, type: bool, long: --global, description: "Update the global Python version pin"}
+            - {name: Rm, kind: flag, type: bool, long: --rm, description: "Remove the Python version pin"}
+            - {name: REQUEST, kind: positional, type: string, description: "The Python version request"}
+        options: [Resolved, No Project, Global, Rm, REQUEST]
+      - name: dir
+        description: "Show the uv Python installation directory"
+        usage: "uv python dir [OPTIONS]"
+        pool:
+          options:
+            - {name: Bin, kind: flag, type: bool, long: --bin, description: "Show the directory into which `uv python` will install Python executables."}
+        options: [Bin]
+      - name: uninstall
+        description: "Uninstall Python versions"
+        usage: "uv python uninstall [OPTIONS] <TARGETS>..."
+        pool:
+          options:
+            - {name: Install Dir, kind: flag, type: string, long: --install-dir, short: "-i", description: "The directory where the Python was installed"}
+            - {name: All, kind: flag, type: bool, long: --all, description: "Uninstall all managed Python versions"}
+            - {name: TARGETS, kind: positional, type: string, required: true, variadic: true, description: "The Python version(s) to uninstall"}
+        options: [Install Dir, All, TARGETS]
+  - name: pip
+    description: "Manage Python packages with a pip-compatible interface"
+    usage: "uv pip [OPTIONS] <COMMAND>"
+    subcommands:
+      - name: compile
+        description: "Compile a `requirements.in` file to a `requirements.txt` or `pylock.toml` file"
+        usage: "uv pip compile [OPTIONS] <SRC_FILE|--group <GROUP>>"
+        pool:
+          options:
+            - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+            - {name: Overrides, kind: flag, type: string, long: --overrides, description: "Override versions using the given requirements files"}
+            - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building source distributions"}
+            - {name: Extra, kind: flag, type: string, long: --extra, description: "Include optional dependencies from the specified extra name; may be provided more than once"}
+            - {name: All Extras, kind: flag, type: bool, long: --all-extras, description: "Include all optional dependencies"}
+            - {name: No Deps, kind: flag, type: bool, long: --no-deps, description: "Ignore package dependencies, instead only add those packages explicitly listed on the command line to the resulting requirements file"}
+            - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Install the specified dependency group from a `pyproject.toml`"}
+            - {name: Output File, kind: flag, type: string, long: --output-file, short: "-o", description: "Write the compiled requirements to the given `requirements.txt` or `pylock.toml` file"}
+            - {name: Format, kind: flag, type: enum, long: --format, values: [requirements.txt, pylock.toml], description: "The format in which the resolution should be output"}
+            - {name: No Strip Extras, kind: flag, type: bool, long: --no-strip-extras, description: "Include extras in the output file"}
+            - {name: No Strip Markers, kind: flag, type: bool, long: --no-strip-markers, description: "Include environment markers in the output file"}
+            - {name: No Annotate, kind: flag, type: bool, long: --no-annotate, description: "Exclude comment annotations indicating the source of each package"}
+            - {name: No Header, kind: flag, type: bool, long: --no-header, description: "Exclude the comment header at the top of the generated output file"}
+            - {name: Annotation Style, kind: flag, type: enum, long: --annotation-style, values: [line, split], description: "The style of the annotation comments included in the output file, used to indicate the source of each package"}
+            - {name: Custom Compile Command, kind: flag, type: string, long: --custom-compile-command, description: "The header comment to include at the top of the output file generated by `uv pip compile`"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Install packages into the system Python environment"}
+            - {name: Generate Hashes, kind: flag, type: bool, long: --generate-hashes, description: "Include distribution hashes in the output file"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Binary, kind: flag, type: string, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: Only Binary, kind: flag, type: string, long: --only-binary, repeatable: true, description: "Only use pre-built wheels; don't build source distributions"}
+            - {name: Python Platform, kind: flag, type: enum, long: --python-platform, values: [windows, linux, macos, x86_64-pc-windows-msvc, i686-pc-windows-msvc, x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl, x86_64-unknown-linux-musl, x86_64-manylinux2014, x86_64-manylinux_2_17, x86_64-manylinux_2_28, x86_64-manylinux_2_31, x86_64-manylinux_2_32, x86_64-manylinux_2_33, x86_64-manylinux_2_34, x86_64-manylinux_2_35, x86_64-manylinux_2_36, x86_64-manylinux_2_37, x86_64-manylinux_2_38, x86_64-manylinux_2_39, x86_64-manylinux_2_40, aarch64-manylinux2014, aarch64-manylinux_2_17, aarch64-manylinux_2_28, aarch64-manylinux_2_31, aarch64-manylinux_2_32, aarch64-manylinux_2_33, aarch64-manylinux_2_34, aarch64-manylinux_2_35, aarch64-manylinux_2_36, aarch64-manylinux_2_37, aarch64-manylinux_2_38, aarch64-manylinux_2_39, aarch64-manylinux_2_40, wasm32-pyodide2024], description: "The platform for which requirements should be resolved"}
+            - {name: Universal, kind: flag, type: bool, long: --universal, description: "Perform a universal resolution, attempting to generate a single `requirements.txt` output file that is compatible with all operating systems, architectures, and Python implementations"}
+            - {name: No Emit Package, kind: flag, type: string, long: --no-emit-package, repeatable: true, description: "Specify a package to omit from the output resolution. Its dependencies will still be included in the resolution. Equivalent to pip-compile's `--unsafe-package` option"}
+            - {name: Emit Index URL, kind: flag, type: bool, long: --emit-index-url, description: "Include `--index-url` and `--extra-index-url` entries in the generated output file"}
+            - {name: Emit Find Links, kind: flag, type: bool, long: --emit-find-links, repeatable: true, description: "Include `--find-links` entries in the generated output file"}
+            - {name: Emit Build Options, kind: flag, type: bool, long: --emit-build-options, description: "Include `--no-binary` and `--only-binary` entries in the generated output file"}
+            - {name: Emit Index Annotation, kind: flag, type: bool, long: --emit-index-annotation, description: "Include comment annotations indicating the index used to resolve each package (e.g., `# from https://pypi.org/simple`)"}
+            - {name: Torch Backend, kind: flag, type: enum, long: --torch-backend, values: [auto, cpu, cu128, cu126, cu125, cu124, cu123, cu122, cu121, cu120, cu118, cu117, cu116, cu115, cu114, cu113, cu112, cu111, cu110, cu102, cu101, cu100, cu92, cu91, cu90, cu80, rocm6.3, rocm6.2.4, rocm6.2, rocm6.1, rocm6.0, rocm5.7, rocm5.6, rocm5.5, rocm5.4.2, rocm5.4, rocm5.3, rocm5.2, rocm5.1.1, rocm4.2, rocm4.1, rocm4.0.1, xpu], description: "The backend to use when fetching packages in the PyTorch ecosystem (e.g., `cpu`, `cu126`, or `auto`)"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+            - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+            - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+            - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+            - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+            - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use during resolution."}
+            - {name: Python Version, kind: flag, type: string, long: --python-version, description: "The Python version to use for resolution"}
+            - {name: SRC_FILE, kind: positional, type: string, variadic: true, description: "Include all packages listed in the given `requirements.in` files"}
+        options: [Constraints, Overrides, Build Constraints, Extra, All Extras, No Deps, Group, Output File, Format, No Strip Extras, No Strip Markers, No Annotate, No Header, Annotation Style, Custom Compile Command, System, Generate Hashes, No Build, No Binary, Only Binary, Python Platform, Universal, No Emit Package, Emit Index URL, Emit Find Links, Emit Build Options, Emit Index Annotation, Torch Backend, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Config Setting, No Build Isolation, No Build Isolation Package, Link Mode, Refresh, Refresh Package, Python, Python Version, SRC_FILE]
+      - name: sync
+        description: "Sync an environment with a `requirements.txt` or `pylock.toml` file"
+        usage: "uv pip sync [OPTIONS] <SRC_FILE>..."
+        pool:
+          options:
+            - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+            - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building source distributions"}
+            - {name: Require Hashes, kind: flag, type: bool, long: --require-hashes, description: "Require a matching hash for each requirement"}
+            - {name: No Verify Hashes, kind: flag, type: bool, long: --no-verify-hashes, description: "Disable validation of hashes in the requirements file"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Install packages into the system Python environment"}
+            - {name: Break System Packages, kind: flag, type: bool, long: --break-system-packages, description: "Allow uv to modify an `EXTERNALLY-MANAGED` Python installation"}
+            - {name: No Break System Packages, kind: flag, type: bool, long: --no-break-system-packages}
+            - {name: Target, kind: flag, type: string, long: --target, description: "Install packages into the specified directory, rather than into the virtual or system Python environment. The packages will be installed at the top-level of the directory"}
+            - {name: Prefix, kind: flag, type: string, long: --prefix, description: "Install packages into `lib`, `bin`, and other top-level folders under the specified directory, as if a virtual environment were present at that location"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Binary, kind: flag, type: string, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: Only Binary, kind: flag, type: string, long: --only-binary, repeatable: true, description: "Only use pre-built wheels; don't build source distributions"}
+            - {name: Allow Empty Requirements, kind: flag, type: bool, long: --allow-empty-requirements, description: "Allow sync of empty requirements, which will clear the environment of all packages"}
+            - {name: No Allow Empty Requirements, kind: flag, type: bool, long: --no-allow-empty-requirements}
+            - {name: Python Version, kind: flag, type: string, long: --python-version, description: "The minimum Python version that should be supported by the requirements (e.g., `3.7` or `3.7.9`)"}
+            - {name: Python Platform, kind: flag, type: enum, long: --python-platform, values: [windows, linux, macos, x86_64-pc-windows-msvc, i686-pc-windows-msvc, x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl, x86_64-unknown-linux-musl, x86_64-manylinux2014, x86_64-manylinux_2_17, x86_64-manylinux_2_28, x86_64-manylinux_2_31, x86_64-manylinux_2_32, x86_64-manylinux_2_33, x86_64-manylinux_2_34, x86_64-manylinux_2_35, x86_64-manylinux_2_36, x86_64-manylinux_2_37, x86_64-manylinux_2_38, x86_64-manylinux_2_39, x86_64-manylinux_2_40, aarch64-manylinux2014, aarch64-manylinux_2_17, aarch64-manylinux_2_28, aarch64-manylinux_2_31, aarch64-manylinux_2_32, aarch64-manylinux_2_33, aarch64-manylinux_2_34, aarch64-manylinux_2_35, aarch64-manylinux_2_36, aarch64-manylinux_2_37, aarch64-manylinux_2_38, aarch64-manylinux_2_39, aarch64-manylinux_2_40, wasm32-pyodide2024], description: "The platform for which requirements should be installed"}
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment after completing the installation, to detect packages with missing dependencies or other issues"}
+            - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Perform a dry run, i.e., don't actually install anything but resolve the dependencies and print the resulting plan"}
+            - {name: Torch Backend, kind: flag, type: enum, long: --torch-backend, values: [auto, cpu, cu128, cu126, cu125, cu124, cu123, cu122, cu121, cu120, cu118, cu117, cu116, cu115, cu114, cu113, cu112, cu111, cu110, cu102, cu101, cu100, cu92, cu91, cu90, cu80, rocm6.3, rocm6.2.4, rocm6.2, rocm6.1, rocm6.0, rocm5.7, rocm5.6, rocm5.5, rocm5.4.2, rocm5.4, rocm5.3, rocm5.2, rocm5.1.1, rocm4.2, rocm4.1, rocm4.0.1, xpu], description: "The backend to use when fetching packages in the PyTorch ecosystem (e.g., `cpu`, `cu126`, or `auto`)"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+            - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+            - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter into which packages should be installed."}
+            - {name: SRC_FILE, kind: positional, type: string, required: true, variadic: true, description: "Include all packages listed in the given `requirements.txt` files"}
+        options: [Constraints, Build Constraints, Require Hashes, No Verify Hashes, System, Break System Packages, No Break System Packages, Target, Prefix, No Build, No Binary, Only Binary, Allow Empty Requirements, No Allow Empty Requirements, Python Version, Python Platform, Strict, Dry Run, Torch Backend, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, Exclude Newer, No Sources, Refresh, Refresh Package, Python, SRC_FILE]
+      - name: install
+        description: "Install packages into an environment"
+        usage: "uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDITABLE>|--group <GROUP>>"
+        pool:
+          options:
+            - {name: Requirements, kind: flag, type: string, long: --requirements, short: "-r", repeatable: true, description: "Install all packages listed in the given `requirements.txt` or `pylock.toml` files"}
+            - {name: Editable, kind: flag, type: string, long: --editable, short: "-e", description: "Install the editable package based on the provided local file path"}
+            - {name: Constraints, kind: flag, type: string, long: --constraints, short: "-c", repeatable: true, description: "Constrain versions using the given requirements files"}
+            - {name: Overrides, kind: flag, type: string, long: --overrides, description: "Override versions using the given requirements files"}
+            - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building source distributions"}
+            - {name: Extra, kind: flag, type: string, long: --extra, description: "Include optional dependencies from the specified extra name; may be provided more than once"}
+            - {name: All Extras, kind: flag, type: bool, long: --all-extras, description: "Include all optional dependencies"}
+            - {name: No Deps, kind: flag, type: bool, long: --no-deps, description: "Ignore package dependencies, instead only installing those packages explicitly listed on the command line or in the requirements files"}
+            - {name: Group, kind: flag, type: string, long: --group, repeatable: true, description: "Install the specified dependency group from a `pyproject.toml`"}
+            - {name: Require Hashes, kind: flag, type: bool, long: --require-hashes, description: "Require a matching hash for each requirement"}
+            - {name: No Verify Hashes, kind: flag, type: bool, long: --no-verify-hashes, description: "Disable validation of hashes in the requirements file"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Install packages into the system Python environment"}
+            - {name: Break System Packages, kind: flag, type: bool, long: --break-system-packages, description: "Allow uv to modify an `EXTERNALLY-MANAGED` Python installation"}
+            - {name: No Break System Packages, kind: flag, type: bool, long: --no-break-system-packages}
+            - {name: Target, kind: flag, type: string, long: --target, description: "Install packages into the specified directory, rather than into the virtual or system Python environment. The packages will be installed at the top-level of the directory"}
+            - {name: Prefix, kind: flag, type: string, long: --prefix, description: "Install packages into `lib`, `bin`, and other top-level folders under the specified directory, as if a virtual environment were present at that location"}
+            - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+            - {name: No Binary, kind: flag, type: string, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+            - {name: Only Binary, kind: flag, type: string, long: --only-binary, repeatable: true, description: "Only use pre-built wheels; don't build source distributions"}
+            - {name: Python Version, kind: flag, type: string, long: --python-version, description: "The minimum Python version that should be supported by the requirements (e.g., `3.7` or `3.7.9`)"}
+            - {name: Python Platform, kind: flag, type: enum, long: --python-platform, values: [windows, linux, macos, x86_64-pc-windows-msvc, i686-pc-windows-msvc, x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl, x86_64-unknown-linux-musl, x86_64-manylinux2014, x86_64-manylinux_2_17, x86_64-manylinux_2_28, x86_64-manylinux_2_31, x86_64-manylinux_2_32, x86_64-manylinux_2_33, x86_64-manylinux_2_34, x86_64-manylinux_2_35, x86_64-manylinux_2_36, x86_64-manylinux_2_37, x86_64-manylinux_2_38, x86_64-manylinux_2_39, x86_64-manylinux_2_40, aarch64-manylinux2014, aarch64-manylinux_2_17, aarch64-manylinux_2_28, aarch64-manylinux_2_31, aarch64-manylinux_2_32, aarch64-manylinux_2_33, aarch64-manylinux_2_34, aarch64-manylinux_2_35, aarch64-manylinux_2_36, aarch64-manylinux_2_37, aarch64-manylinux_2_38, aarch64-manylinux_2_39, aarch64-manylinux_2_40, wasm32-pyodide2024], description: "The platform for which requirements should be installed"}
+            - {name: Exact, kind: flag, type: bool, long: --exact, description: "Perform an exact sync, removing extraneous packages"}
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment after completing the installation, to detect packages with missing dependencies or other issues"}
+            - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Perform a dry run, i.e., don't actually install anything but resolve the dependencies and print the resulting plan"}
+            - {name: Torch Backend, kind: flag, type: enum, long: --torch-backend, values: [auto, cpu, cu128, cu126, cu125, cu124, cu123, cu122, cu121, cu120, cu118, cu117, cu116, cu115, cu114, cu113, cu112, cu111, cu110, cu102, cu101, cu100, cu92, cu91, cu90, cu80, rocm6.3, rocm6.2.4, rocm6.2, rocm6.1, rocm6.0, rocm5.7, rocm5.6, rocm5.5, rocm5.4.2, rocm5.4, rocm5.3, rocm5.2, rocm5.1.1, rocm4.2, rocm4.1, rocm4.0.1, xpu], description: "The backend to use when fetching packages in the PyTorch ecosystem (e.g., `cpu`, `cu126`, or `auto`)"}
+            - {name: User, kind: flag, type: bool, long: --user}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+            - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+            - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+            - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+            - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+            - {name: Reinstall, kind: flag, type: bool, long: --reinstall, description: "Reinstall all packages, regardless of whether they're already installed. Implies `--refresh`"}
+            - {name: Reinstall Package, kind: flag, type: string, long: --reinstall-package, repeatable: true, description: "Reinstall a specific package, regardless of whether it's already installed. Implies `--refresh-package`"}
+            - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+            - {name: Compile Bytecode, kind: flag, type: bool, long: --compile-bytecode, description: "Compile Python files to bytecode after installation"}
+            - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+            - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+            - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+            - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+            - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter into which packages should be installed."}
+            - {name: PACKAGE, kind: positional, type: string, variadic: true, description: "Install all listed packages"}
+        options: [Requirements, Editable, Constraints, Overrides, Build Constraints, Extra, All Extras, No Deps, Group, Require Hashes, No Verify Hashes, System, Break System Packages, No Break System Packages, Target, Prefix, No Build, No Binary, Only Binary, Python Version, Python Platform, Exact, Strict, Dry Run, Torch Backend, User, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Reinstall, Reinstall Package, Link Mode, Compile Bytecode, Config Setting, No Build Isolation, No Build Isolation Package, Refresh, Refresh Package, Python, PACKAGE]
+      - name: uninstall
+        description: "Uninstall packages from an environment"
+        usage: "uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>"
+        pool:
+          options:
+            - {name: Requirements, kind: flag, type: string, long: --requirements, short: "-r", repeatable: true, description: "Uninstall all packages listed in the given requirements files"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for remote requirements files"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Use the system Python to uninstall packages"}
+            - {name: Break System Packages, kind: flag, type: bool, long: --break-system-packages, description: "Allow uv to modify an `EXTERNALLY-MANAGED` Python installation"}
+            - {name: No Break System Packages, kind: flag, type: bool, long: --no-break-system-packages}
+            - {name: Target, kind: flag, type: string, long: --target, description: "Uninstall packages from the specified `--target` directory"}
+            - {name: Prefix, kind: flag, type: string, long: --prefix, description: "Uninstall packages from the specified `--prefix` directory"}
+            - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Perform a dry run, i.e., don't actually uninstall anything but print the resulting plan"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter from which packages should be uninstalled."}
+            - {name: PACKAGE, kind: positional, type: string, variadic: true, description: "Uninstall all listed packages"}
+        options: [Requirements, Keyring Provider, System, Break System Packages, No Break System Packages, Target, Prefix, Dry Run, Python, PACKAGE]
+      - name: freeze
+        description: "List, in requirements format, packages installed in an environment"
+        usage: "uv pip freeze [OPTIONS]"
+        pool:
+          options:
+            - {name: Exclude Editable, kind: flag, type: bool, long: --exclude-editable, description: "Exclude any editable packages from output"}
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment, to detect packages with missing dependencies and other issues"}
+            - {name: Path, kind: flag, type: string, long: --path, description: "Restrict to the specified installation path for listing packages (can be used multiple times)"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "List packages in the system Python environment"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter for which packages should be listed."}
+        options: [Exclude Editable, Strict, Path, System, Python]
+      - name: list
+        description: "List, in tabular format, packages installed in an environment"
+        usage: "uv pip list [OPTIONS]"
+        pool:
+          options:
+            - {name: Editable, kind: flag, type: bool, long: --editable, short: "-e", description: "Only include editable projects"}
+            - {name: Exclude Editable, kind: flag, type: bool, long: --exclude-editable, description: "Exclude any editable packages from output"}
+            - {name: Exclude, kind: flag, type: string, long: --exclude, description: "Exclude the specified package(s) from the output"}
+            - {name: Format, kind: flag, type: enum, long: --format, values: [columns, freeze, json], description: "Select the output format"}
+            - {name: Outdated, kind: flag, type: bool, long: --outdated, description: "List outdated packages"}
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment, to detect packages with missing dependencies and other issues"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "List packages in the system Python environment"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter for which packages should be listed."}
+        options: [Editable, Exclude Editable, Exclude, Format, Outdated, Strict, System, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Exclude Newer, Python]
+      - name: show
+        description: "Show information about one or more installed packages"
+        usage: "uv pip show [OPTIONS] [PACKAGE]..."
+        pool:
+          options:
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment, to detect packages with missing dependencies and other issues"}
+            - {name: Files, kind: flag, type: bool, long: --files, short: "-f", description: "Show the full list of installed files for each package"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "Show a package in the system Python environment"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to find the package in."}
+            - {name: PACKAGE, kind: positional, type: string, variadic: true, description: "The package(s) to display"}
+        options: [Strict, Files, System, Python, PACKAGE]
+      - name: tree
+        description: "Display the dependency tree for an environment"
+        usage: "uv pip tree [OPTIONS]"
+        pool:
+          options:
+            - {name: Show Version Specifiers, kind: flag, type: bool, long: --show-version-specifiers, description: "Show the version constraint(s) imposed on each package"}
+            - {name: Depth, kind: flag, type: string, long: --depth, short: "-d", description: "Maximum display depth of the dependency tree"}
+            - {name: Prune, kind: flag, type: string, long: --prune, description: "Prune the given package from the display of the dependency tree"}
+            - {name: Package, kind: flag, type: string, long: --package, description: "Display only the specified packages"}
+            - {name: No Dedupe, kind: flag, type: bool, long: --no-dedupe, description: "Do not de-duplicate repeated dependencies. Usually, when a package has already displayed its dependencies, further occurrences will not re-display its dependencies, and will include a (*) to indicate it has already been shown. This flag will cause those duplicates to be repeated"}
+            - {name: Invert, kind: flag, type: bool, long: --invert, description: "Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package"}
+            - {name: Outdated, kind: flag, type: bool, long: --outdated, description: "Show the latest available version of each package in the tree"}
+            - {name: Strict, kind: flag, type: bool, long: --strict, description: "Validate the Python environment, to detect packages with missing dependencies and other issues"}
+            - {name: System, kind: flag, type: bool, long: --system, description: "List packages in the system Python environment"}
+            - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+            - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+            - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+            - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+            - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+            - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+            - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+            - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+            - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter for which packages should be listed."}
+        options: [Show Version Specifiers, Depth, Prune, Package, No Dedupe, Invert, Outdated, Strict, System, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Exclude Newer, Python]
+      - name: check
+        description: "Verify installed packages have compatible dependencies"
+        usage: "uv pip check [OPTIONS]"
+        pool:
+          options:
+            - {name: System, kind: flag, type: bool, long: --system, description: "Check packages in the system Python environment"}
+            - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter for which packages should be checked."}
+        options: [System, Python]
+  - name: venv
+    description: "Create a virtual environment"
+    usage: "uv venv [OPTIONS] [PATH]"
+    pool:
+      options:
+        - {name: No Project, kind: flag, type: bool, long: --no-project, description: "Avoid discovering a project or workspace"}
+        - {name: Seed, kind: flag, type: bool, long: --seed, description: "Install seed packages (one or more of: `pip`, `setuptools`, and `wheel`) into the virtual environment"}
+        - {name: Allow Existing, kind: flag, type: bool, long: --allow-existing, description: "Preserve any existing files or directories at the target path"}
+        - {name: Prompt, kind: flag, type: string, long: --prompt, description: "Provide an alternative prompt prefix for the virtual environment."}
+        - {name: System Site Packages, kind: flag, type: bool, long: --system-site-packages, description: "Give the virtual environment access to the system site packages directory"}
+        - {name: Relocatable, kind: flag, type: bool, long: --relocatable, description: "Make the virtual environment relocatable"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for the virtual environment."}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: PATH, kind: positional, type: string, description: "The path to the virtual environment to create"}
+    options: [No Project, Seed, Allow Existing, Prompt, System Site Packages, Relocatable, Index Strategy, Keyring Provider, Exclude Newer, Link Mode, Python, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Refresh, Refresh Package, PATH]
+  - name: build
+    description: "Build Python packages into source distributions and wheels"
+    usage: "uv build [OPTIONS] [SRC]"
+    pool:
+      options:
+        - {name: Package, kind: flag, type: string, long: --package, description: "Build a specific package in the workspace"}
+        - {name: All Packages, kind: flag, type: bool, long: --all-packages, description: "Builds all packages in the workspace"}
+        - {name: Out Dir, kind: flag, type: string, long: --out-dir, short: "-o", description: "The output directory to which distributions should be written"}
+        - {name: Sdist, kind: flag, type: bool, long: --sdist, description: "Build a source distribution (\"sdist\") from the given directory"}
+        - {name: Wheel, kind: flag, type: bool, long: --wheel, description: "Build a binary distribution (\"wheel\") from the given directory"}
+        - {name: No Build Logs, kind: flag, type: bool, long: --no-build-logs, description: "Hide logs from the build backend"}
+        - {name: Force Pep517, kind: flag, type: bool, long: --force-pep517, description: "Always build through PEP 517, don't use the fast path for the uv build backend"}
+        - {name: Build Constraints, kind: flag, type: string, long: --build-constraints, short: "-b", repeatable: true, description: "Constrain build dependencies using the given requirements files when building distributions"}
+        - {name: Require Hashes, kind: flag, type: bool, long: --require-hashes, description: "Require a matching hash for each requirement"}
+        - {name: No Verify Hashes, kind: flag, type: bool, long: --no-verify-hashes, description: "Disable validation of hashes in the requirements file"}
+        - {name: Python, kind: flag, type: string, long: --python, short: "-p", description: "The Python interpreter to use for the build environment."}
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The URLs to use when resolving dependencies, in addition to the default index"}
+        - {name: Default Index, kind: flag, type: string, long: --default-index, description: "The URL of the default package index (by default: <https://pypi.org/simple>)"}
+        - {name: Index URL, kind: flag, type: string, long: --index-url, short: "-i", description: "(Deprecated: use `--default-index` instead) The URL of the Python package index (by default: <https://pypi.org/simple>)"}
+        - {name: Extra Index URL, kind: flag, type: string, long: --extra-index-url, repeatable: true, description: "(Deprecated: use `--index` instead) Extra URLs of package indexes to use, in addition to `--index-url`"}
+        - {name: Find Links, kind: flag, type: string, long: --find-links, short: "-f", repeatable: true, description: "Locations to search for candidate distributions, in addition to those found in the registry indexes"}
+        - {name: No Index, kind: flag, type: bool, long: --no-index, description: "Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via `--find-links`"}
+        - {name: Index Strategy, kind: flag, type: enum, long: --index-strategy, values: [first-index, unsafe-first-match, unsafe-best-match], description: "The strategy to use when resolving against multiple index URLs"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for index URLs"}
+        - {name: Upgrade, kind: flag, type: bool, long: --upgrade, short: "-U", description: "Allow package upgrades, ignoring pinned versions in any existing output file. Implies `--refresh`"}
+        - {name: Upgrade Package, kind: flag, type: string, long: --upgrade-package, short: "-P", description: "Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies `--refresh-package`"}
+        - {name: Resolution, kind: flag, type: enum, long: --resolution, values: [highest, lowest, lowest-direct], description: "The strategy to use when selecting between the different compatible versions for a given package requirement"}
+        - {name: Prerelease, kind: flag, type: enum, long: --prerelease, values: [disallow, allow, if-necessary, explicit, if-necessary-or-explicit], description: "The strategy to use when considering pre-release versions"}
+        - {name: Fork Strategy, kind: flag, type: enum, long: --fork-strategy, values: [fewest, requires-python], description: "The strategy to use when selecting multiple versions of a given package across Python versions and platforms"}
+        - {name: Exclude Newer, kind: flag, type: string, long: --exclude-newer, description: "Limit candidate packages to those that were uploaded prior to the given date"}
+        - {name: No Sources, kind: flag, type: bool, long: --no-sources, description: "Ignore the `tool.uv.sources` table when resolving dependencies. Used to lock against the standards-compliant, publishable package metadata, as opposed to using any workspace, Git, URL, or local path sources"}
+        - {name: Config Setting, kind: flag, type: string, long: --config-setting, short: "-C", description: "Settings to pass to the PEP 517 build backend, specified as `KEY=VALUE` pairs"}
+        - {name: No Build Isolation, kind: flag, type: bool, long: --no-build-isolation, description: "Disable isolation when building source distributions"}
+        - {name: No Build Isolation Package, kind: flag, type: string, long: --no-build-isolation-package, description: "Disable isolation when building source distributions for a specific package"}
+        - {name: No Build, kind: flag, type: bool, long: --no-build, description: "Don't build source distributions"}
+        - {name: No Build Package, kind: flag, type: string, long: --no-build-package, description: "Don't build source distributions for a specific package"}
+        - {name: No Binary, kind: flag, type: bool, long: --no-binary, repeatable: true, description: "Don't install pre-built wheels"}
+        - {name: No Binary Package, kind: flag, type: string, long: --no-binary-package, description: "Don't install pre-built wheels for a specific package"}
+        - {name: Link Mode, kind: flag, type: enum, long: --link-mode, values: [clone, copy, hardlink, symlink], description: "The method to use when installing packages from the global cache"}
+        - {name: Refresh, kind: flag, type: bool, long: --refresh, description: "Refresh all cached data"}
+        - {name: Refresh Package, kind: flag, type: string, long: --refresh-package, description: "Refresh cached data for a specific package"}
+        - {name: SRC, kind: positional, type: string, description: "The directory from which distributions should be built, or a source distribution archive to build into a wheel"}
+    options: [Package, All Packages, Out Dir, Sdist, Wheel, No Build Logs, Force Pep517, Build Constraints, Require Hashes, No Verify Hashes, Python, Index, Default Index, Index URL, Extra Index URL, Find Links, No Index, Index Strategy, Keyring Provider, Upgrade, Upgrade Package, Resolution, Prerelease, Fork Strategy, Exclude Newer, No Sources, Config Setting, No Build Isolation, No Build Isolation Package, No Build, No Build Package, No Binary, No Binary Package, Link Mode, Refresh, Refresh Package, SRC]
+  - name: publish
+    description: "Upload distributions to an index"
+    usage: "uv publish [OPTIONS] [FILES]..."
+    pool:
+      options:
+        - {name: Index, kind: flag, type: string, long: --index, repeatable: true, description: "The name of an index in the configuration to use for publishing."}
+        - {name: Username, kind: flag, type: string, long: --username, short: "-u", description: "The username for the upload"}
+        - {name: Password, kind: flag, type: string, long: --password, short: "-p", description: "The password for the upload"}
+        - {name: Token, kind: flag, type: string, long: --token, short: "-t", description: "The token for the upload"}
+        - {name: Trusted Publishing, kind: flag, type: enum, long: --trusted-publishing, values: [automatic, always, never], description: "Configure using trusted publishing through GitHub Actions"}
+        - {name: Keyring Provider, kind: flag, type: enum, long: --keyring-provider, values: [disabled, subprocess], description: "Attempt to use `keyring` for authentication for remote requirements files"}
+        - {name: Publish URL, kind: flag, type: string, long: --publish-url, description: "The URL of the upload endpoint (not the index URL)"}
+        - {name: Check URL, kind: flag, type: string, long: --check-url, description: "Check an index URL for existing files to skip duplicate uploads"}
+        - {name: FILES, kind: positional, type: string, variadic: true, description: "Paths to the files to upload. Accepts glob expressions"}
+    options: [Index, Username, Password, Token, Trusted Publishing, Keyring Provider, Publish URL, Check URL, FILES]
+  - name: cache
+    description: "Manage uv's cache"
+    usage: "uv cache [OPTIONS] <COMMAND>"
+    subcommands:
+      - name: clean
+        description: "Clear the cache, removing all entries or those linked to specific packages"
+        usage: "uv cache clean [OPTIONS] [PACKAGE]..."
+        pool:
+          options:
+            - {name: PACKAGE, kind: positional, type: string, variadic: true, description: "The packages to remove from the cache"}
+        options: [PACKAGE]
+      - name: prune
+        description: "Prune all unreachable objects from the cache"
+        usage: "uv cache prune [OPTIONS]"
+        pool:
+          options:
+            - {name: Ci, kind: flag, type: bool, long: --ci, description: "Optimize the cache for persistence in a continuous integration environment, like GitHub Actions"}
+        options: [Ci]
+      - name: dir
+        description: "Show the cache directory"
+        usage: "uv cache dir [OPTIONS]"
+  - name: self
+    description: "Manage the uv executable"
+    usage: "uv self [OPTIONS] <COMMAND>"
+    subcommands:
+      - name: update
+        description: "Update uv"
+        usage: "uv self update [OPTIONS] [TARGET_VERSION]"
+        pool:
+          options:
+            - {name: Token, kind: flag, type: string, long: --token, description: "A GitHub token for authentication. A token is not required but can be used to reduce the chance of encountering rate limits"}
+            - {name: Dry Run, kind: flag, type: bool, long: --dry-run, description: "Run without performing the update"}
+            - {name: TARGET_VERSION, kind: positional, type: string, description: "Update to the specified version. If not provided, uv will update to the latest version"}
+        options: [Token, Dry Run, TARGET_VERSION]
+      - name: version
+        description: "Display uv's version"
+        usage: "uv self version [OPTIONS]"
+        pool:
+          options:
+            - {name: Short, kind: flag, type: bool, long: --short, description: "Only print the version"}
+            - {name: Output Format, kind: flag, type: enum, long: --output-format, values: [text, json]}
+        options: [Short, Output Format]
+  - name: help
+    description: "Display documentation for a command"
+    usage: "uv help [OPTIONS] [COMMAND]..."
+    pool:
+      options:
+        - {name: No Pager, kind: flag, type: bool, long: --no-pager, description: "Disable pager when printing help"}
+        - {name: COMMAND, kind: positional, type: passthrough}
+    options: [No Pager, COMMAND]

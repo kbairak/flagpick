@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func loadConfigFile(t *testing.T, name string) *CommandConfig {
@@ -183,5 +185,62 @@ func TestOptionsScopeBySegment(t *testing.T) {
 	m.chooseSubAt(1, subIndex(m.subcommandsAt(1), "add"))
 	if got := names(); !got["Remote add fetch"] || got["Git dir"] {
 		t.Fatalf("remote add scope = %v, want remote-add flags and no globals", got)
+	}
+}
+
+// TestSubcommandByName checks selecting a subcommand by name through the
+// filter-and-enter helper.
+func TestSubcommandByName(t *testing.T) {
+	cfg := loadConfigFile(t, "direnv")
+	sess, _ := Prefill(cfg, nil)
+	m := newModel("direnv", cfg, sess)
+
+	m = chooseSubOption(m, "edit")
+	if m.pendingSub() {
+		t.Fatal("edit should be chosen")
+	}
+	if m.res().Name != "edit" {
+		t.Fatalf("path = %q, want edit", m.res().Name)
+	}
+}
+
+// TestSubcommandFilterEnter checks the flag-like subcommand flow: focus the
+// SUBCOMMAND token, type to filter (by name or alias), press enter to set it.
+func TestSubcommandFilterEnter(t *testing.T) {
+	cfg := loadConfigFile(t, "direnv")
+	sess, _ := Prefill(cfg, nil)
+	m := newModel("direnv", cfg, sess)
+
+	// The Options pane lists subcommands while the SUBCOMMAND token is focused.
+	if lvl, ok := m.focusedSubLevel(); !ok || lvl != 0 {
+		t.Fatalf("focusedSubLevel = %d %v, want 0 true", lvl, ok)
+	}
+	rows := m.rows()
+	if len(rows) == 0 || rows[0].kind != rowSub {
+		t.Fatalf("rows = %#v, want subcommand rows", rows)
+	}
+
+	// Empty filter + enter is a no-op.
+	upd, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = upd.(model)
+	if !m.pendingSub() {
+		t.Fatal("enter with empty filter should not choose a subcommand")
+	}
+
+	// Typing filters; an alias ("permit") matches the "allow" subcommand.
+	for _, r := range "permit" {
+		upd, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = upd.(model)
+	}
+	if len(m.rows()) == 0 {
+		t.Fatal("alias filter matched no subcommand")
+	}
+	upd, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = upd.(model)
+	if m.pendingSub() {
+		t.Fatal("enter did not set the subcommand")
+	}
+	if m.res().Name != "allow" {
+		t.Fatalf("path = %q, want allow", m.res().Name)
 	}
 }

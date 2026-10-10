@@ -80,14 +80,44 @@ func (m model) filtered() []Option {
 	return filterOptions(m.listOptions(), m.filter)
 }
 
-// rows maps the filtered options to one selectable row each.
+// rows maps the filtered options to one selectable row each. When a subcommand
+// token is focused, the rows are that level's subcommands instead of flags.
 func (m model) rows() []row {
+	if lvl, ok := m.focusedSubLevel(); ok {
+		return m.subRows(lvl)
+	}
 	filtered := m.filtered()
 	rows := make([]row, 0, len(filtered))
 	for _, opt := range filtered {
 		rows = append(rows, row{opt: opt, kind: rowOption})
 	}
 	return rows
+}
+
+// subRows lists the subcommands at depth, fuzzy-filtered by name or alias.
+func (m model) subRows(depth int) []row {
+	subs := m.subcommandsAt(depth)
+	rows := make([]row, 0, len(subs))
+	for i, s := range subs {
+		if !fuzzyMatchSub(s, m.filter) {
+			continue
+		}
+		rows = append(rows, row{kind: rowSub, sub: s, subIdx: i})
+	}
+	return rows
+}
+
+// fuzzyMatchSub reports whether filter matches a subcommand's name or an alias.
+func fuzzyMatchSub(s *RNode, filter string) bool {
+	if fuzzyMatch(s.Name, filter) {
+		return true
+	}
+	for _, a := range s.Aliases {
+		if fuzzyMatch(a, filter) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *model) moveCursor(delta int) {

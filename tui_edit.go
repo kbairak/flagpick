@@ -249,7 +249,7 @@ func (m *model) clearSelected() {
 	case rowValue:
 		m.deleteListValue(r)
 		return
-	case rowAdd, rowSep:
+	case rowAdd, rowSep, rowSub:
 		return
 	}
 	name := r.opt.OptName()

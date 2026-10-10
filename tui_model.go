@@ -28,6 +28,7 @@ const (
 	rowValue
 	rowAdd
 	rowSep
+	rowSub
 )
 
 type row struct {
@@ -35,6 +36,8 @@ type row struct {
 	kind   rowKind
 	valIdx int
 	value  string
+	sub    *RNode
+	subIdx int
 }
 
 // screen is the active full-screen overlay. The main view is the default;
@@ -45,7 +48,6 @@ const (
 	screenMain screen = iota
 	screenPicker
 	screenEnum
-	screenSub
 	screenConfirm
 	screenHelp
 )
@@ -57,21 +59,6 @@ type enumMenu struct {
 	values []string
 	sel    int
 	filter string
-}
-
-// subMenu is the state of the subcommand menu.
-type subMenu struct {
-	entries []subEntry
-	sel     int
-	filter  string
-	depth   int // subcommand depth being selected
-}
-
-// subEntry is one selectable subcommand in the menu.
-type subEntry struct {
-	name  string
-	desc  string
-	index int // index into the node's Subcommands
 }
 
 // confirmPrompt is the state of the quit-confirmation popup.
@@ -103,7 +90,6 @@ type model struct {
 	picker  picker
 	pick    pickerState
 	enum    enumMenu
-	sub     subMenu
 	confirm confirmPrompt
 
 	errMsg     string
@@ -181,24 +167,22 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+	if sz, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = sz.Width
+		m.height = sz.Height
 		return m, nil
+	}
+	if m.screen == screenPicker {
+		return m.handlePickerKey(msg)
+	}
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.screen == screenPicker {
-			return m.handlePickerKey(msg)
-		}
 		updated, cmd := m.handleKey(msg)
 		if mm, ok := updated.(model); ok {
 			mm.syncMode()
 			return mm, cmd
 		}
 		return updated, cmd
-	}
-	if m.screen == screenPicker {
-		return m, nil
 	}
 	if cmd, ok := m.handleCSIKey(msg); ok {
 		m.syncMode()

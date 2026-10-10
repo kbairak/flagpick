@@ -1,86 +1,102 @@
 package main
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sahilm/fuzzy"
 )
 
-// pickerEntry is one row in the filesystem picker.
+// maxPickerEntries caps the recursive walk so huge trees stay responsive.
+const maxPickerEntries = 10000
+
+// pickerEntry is one candidate path found under the picker root.
 type pickerEntry struct {
-	name string
+	path string // display path relative to the root, using / separators
 	dir  bool
 }
 
-// picker is a minimal filesystem browser with fuzzy filtering. It is used by
-// the TUI to choose `path` positional values.
+// pickerMatch is a filtered entry plus the rune indices the filter matched, for
+// highlighting.
+type pickerMatch struct {
+	entry pickerEntry
+	idx   []int
+}
+
+// picker is a recursive, fuzzy-filtered path chooser. It walks every path under
+// the root once, filters them with sahilm/fuzzy, and lets the user pick one.
+// The query line is a bubbles/textinput so all editing keys work unchanged.
 type picker struct {
 	dir     string
-	entries []pickerEntry
+	all     []pickerEntry
+	matches []pickerMatch
 	cursor  int
 	filter  string
+	input   textinput.Model
 	errMsg  string
 }
 
 func newPicker(dir string) picker {
-	p := picker{dir: dir}
+	in := textinput.New()
+	in.Prompt = ""
+	in.CharLimit = 0
+	in.Focus()
+	p := picker{dir: dir, input: in}
 	p.reload()
 	return p
 }
 
-// reload re-reads the current directory, hiding dotfiles and listing
-// directories before files.
+// reload walks the root (skipping hidden directories) and rebuilds the matches.
 func (p *picker) reload() {
 	p.errMsg = ""
+	p.all = nil
+	root := p.dir
+	_ = fs.WalkDir(os.DirFS(root), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || path == "." {
+			return nil
+		}
+		if d.IsDir() && strings.HasPrefix(d.Name(), ".") {
+			return fs.SkipDir
+		}
+		if len(p.all) >= maxPickerEntries {
+			return fs.SkipAll
+		}
+		p.all = append(p.all, pickerEntry{path: path, dir: d.IsDir()})
+		return nil
+	})
+	p.refilter()
+}
+
+// refilter recomputes the matches for the current filter.
+func (p *picker) refilter() {
 	p.cursor = 0
-	ents, err := os.ReadDir(p.dir)
-	if err != nil {
-		p.errMsg = err.Error()
-		p.entries = nil
+	if p.filter == "" {
+		p.matches = make([]pickerMatch, 0, len(p.all))
+		for _, e := range p.all {
+			p.matches = append(p.matches, pickerMatch{entry: e})
+		}
 		return
 	}
-	var dirs, files []pickerEntry
-	for _, e := range ents {
-		name := e.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
-		if e.IsDir() {
-			dirs = append(dirs, pickerEntry{name: name, dir: true})
-		} else {
-			files = append(files, pickerEntry{name: name})
-		}
+	targets := make([]string, len(p.all))
+	for i, e := range p.all {
+		targets[i] = e.path
 	}
-	p.entries = append(dirs, files...)
-	// Start on the first real entry; index 0 is the synthetic ".." row.
-	if p.filter == "" && p.hasParent() && len(p.entries) > 0 {
-		p.cursor = 1
+	ranks := fuzzy.Find(p.filter, targets)
+	p.matches = make([]pickerMatch, 0, len(ranks))
+	for _, r := range ranks {
+		p.matches = append(p.matches, pickerMatch{entry: p.all[r.Index], idx: r.MatchedIndexes})
 	}
 }
 
-// visible returns the entries matching the current filter. A ".." row is
-// prepended when not at the filesystem root and no filter is active.
-func (p picker) visible() []pickerEntry {
-	var out []pickerEntry
-	if p.filter == "" && p.hasParent() {
-		out = append(out, pickerEntry{name: "..", dir: true})
-	}
-	for _, e := range p.entries {
-		if p.filter == "" || fuzzyMatch(e.name, p.filter) {
-			out = append(out, e)
-		}
-	}
-	return out
-}
-
-func (p picker) hasParent() bool {
-	return filepath.Dir(p.dir) != p.dir
-}
-
+// move shifts the cursor without wrapping.
 func (p *picker) move(delta int) {
-	n := len(p.visible())
+	n := len(p.matches)
 	if n == 0 {
 		p.cursor = 0
 		return
@@ -95,119 +111,152 @@ func (p *picker) move(delta int) {
 }
 
 func (p picker) selected() (pickerEntry, bool) {
-	list := p.visible()
-	if p.cursor < 0 || p.cursor >= len(list) {
+	if p.cursor < 0 || p.cursor >= len(p.matches) {
 		return pickerEntry{}, false
 	}
-	return list[p.cursor], true
+	return p.matches[p.cursor].entry, true
 }
 
-// selectedPath returns the absolute path of the highlighted entry. It returns
-// false for ".." and for an empty list.
+// selectedPath returns the absolute path of the highlighted entry.
 func (p picker) selectedPath() (string, bool) {
 	e, ok := p.selected()
-	if !ok || e.name == ".." {
+	if !ok {
 		return "", false
 	}
-	return filepath.Join(p.dir, e.name), true
+	return filepath.Join(p.dir, filepath.FromSlash(e.path)), true
 }
 
-// descend enters the highlighted directory.
-func (p *picker) descend() {
-	e, ok := p.selected()
-	if !ok || !e.dir || e.name == ".." {
-		return
+// update forwards a message to the query input and refilters when it changes.
+// Up/down/enter/esc are handled by the caller and never reach here.
+func (p picker) update(msg tea.Msg) (picker, tea.Cmd) {
+	var cmd tea.Cmd
+	p.input, cmd = p.input.Update(msg)
+	if v := p.input.Value(); v != p.filter {
+		p.filter = v
+		p.refilter()
 	}
-	p.dir = filepath.Join(p.dir, e.name)
-	p.filter = ""
-	p.reload()
+	return p, cmd
 }
 
-// parent moves to the parent directory. It reports whether it moved.
-func (p *picker) parent() bool {
-	up := filepath.Dir(p.dir)
-	if up == p.dir {
-		return false
-	}
-	p.dir = up
-	p.filter = ""
-	p.reload()
-	return true
-}
+// Picker styles, loosely following fzf.
+var (
+	pickerDirStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+	pickerMatchStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
+	pickerPromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
+	pickerCountStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+)
 
-// pushFilter appends printable characters to the filter.
-func (p *picker) pushFilter(s string) {
-	p.filter += s
-	p.cursor = 0
-}
-
-// backspace removes the last filter rune. It reports whether it consumed the
-// key (i.e. the filter was non-empty).
-func (p *picker) backspace() bool {
-	if p.filter == "" {
-		return false
-	}
-	p.filter = trimLastRune(p.filter)
-	p.cursor = 0
-	return true
-}
-
+// render draws the picker full-screen: a dim header with the directory, the
+// match list, an n/m count, and a bottom `> query` prompt.
 func (p picker) render(width, height int) string {
 	cw := width - 1
 	if cw < 1 {
 		cw = 1
 	}
-	innerW := cw - 2
-	if innerW < 10 {
-		innerW = 10
+	if height < 3 {
+		height = 3
 	}
-	listH := height - 5
-	if listH < 1 {
-		listH = 1
-	}
+	listH := height - 3
 
-	head := titleStyle.Render(truncate("Pick "+p.dir, innerW))
-	filterLine := truncate("filter: "+p.filter+"▏", innerW)
+	lines := make([]string, 0, height)
+	lines = append(lines, dimStyle.Render(truncate("  "+p.dir, cw)))
 
-	var b strings.Builder
-	list := p.visible()
+	var rows []string
 	switch {
 	case p.errMsg != "":
-		b.WriteString(errStyle.Render(truncate(p.errMsg, innerW)))
-	case len(list) == 0:
-		b.WriteString(dimStyle.Render("  (empty)"))
+		rows = append(rows, errStyle.Render(truncate("  "+p.errMsg, cw)))
+	case len(p.matches) == 0:
+		rows = append(rows, dimStyle.Render(truncate("  (no match)", cw)))
 	default:
 		start := 0
 		if p.cursor >= listH {
 			start = p.cursor - listH + 1
 		}
+		if start > len(p.matches)-listH {
+			start = len(p.matches) - listH
+		}
+		if start < 0 {
+			start = 0
+		}
 		end := start + listH
-		if end > len(list) {
-			end = len(list)
+		if end > len(p.matches) {
+			end = len(p.matches)
 		}
 		for i := start; i < end; i++ {
-			line := p.entryLine(list[i], innerW-2)
 			if i == p.cursor {
-				line = cursorStyle.Render("> " + line)
+				rows = append(rows, cursorStyle.Render(truncate("> "+plainLine(p.matches[i].entry), cw)))
 			} else {
-				line = "  " + line
-			}
-			b.WriteString(line)
-			if i < end-1 {
-				b.WriteString("\n")
+				rows = append(rows, "  "+p.nameLine(p.matches[i], cw-2))
 			}
 		}
 	}
+	for len(rows) < listH {
+		rows = append(rows, "")
+	}
+	if len(rows) > listH {
+		rows = rows[:listH]
+	}
+	lines = append(lines, rows...)
 
-	content := head + "\n" + filterLine + "\n" + b.String()
-	box := boxBorder.Width(innerW).Height(listH + 2).Render(content)
-	hint := dimStyle.Render(truncate("enter select · l open · h back · type to filter · esc cancel", cw))
-	return box + "\n" + hint
+	count := "0/0"
+	if len(p.matches) > 0 {
+		count = fmt.Sprintf("%d/%d", p.cursor+1, len(p.matches))
+	}
+	lines = append(lines, pickerCountStyle.Render(truncate("  "+count, cw)))
+
+	in := p.input
+	// textinput renders one cell wider than Width (the cursor), so leave room.
+	in.Width = cw - 3
+	if in.Width < 1 {
+		in.Width = 1
+	}
+	lines = append(lines, pickerPromptStyle.Render("> ")+in.View())
+
+	return strings.Join(lines, "\n")
 }
 
-func (p picker) entryLine(e pickerEntry, width int) string {
+// plainLine is the unstyled path of an entry (with a trailing slash for dirs).
+func plainLine(e pickerEntry) string {
 	if e.dir {
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render(truncate(e.name+"/", width))
+		return e.path + "/"
 	}
-	return truncate(e.name, width)
+	return e.path
+}
+
+// nameLine renders an entry's path, coloring directories and highlighting the
+// characters the filter matched, truncated to width cells.
+func (p picker) nameLine(m pickerMatch, width int) string {
+	if width < 1 {
+		return ""
+	}
+	disp := []rune(m.entry.path)
+	if m.entry.dir {
+		disp = append(disp, '/')
+	}
+	truncated := len(disp) > width
+	if truncated {
+		if width == 1 {
+			return "…"
+		}
+		disp = disp[:width-1]
+	}
+	matched := map[int]bool{}
+	for _, i := range m.idx {
+		matched[i] = true
+	}
+	var b strings.Builder
+	for i, r := range disp {
+		switch {
+		case matched[i] && p.filter != "":
+			b.WriteString(pickerMatchStyle.Render(string(r)))
+		case m.entry.dir:
+			b.WriteString(pickerDirStyle.Render(string(r)))
+		default:
+			b.WriteRune(r)
+		}
+	}
+	if truncated {
+		b.WriteString("…")
+	}
+	return b.String()
 }

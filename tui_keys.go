@@ -126,51 +126,38 @@ func trimCSIPrefix(b []byte) []byte {
 	return b
 }
 
-// handlePickerKey routes keys to the filesystem picker: printable runes fuzzy
-// filter entries, enter selects, l opens a directory, h/backspace go up, esc
-// cancels.
-func (m model) handlePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-	switch key {
-	case "esc":
-		m.screen = screenMain
-		return m, nil
-	case "enter":
-		if path, ok := m.picker.selectedPath(); ok {
-			name := m.pick.name
-			m.commitPath(path)
+// handlePickerKey drives the path picker. Only up/down (navigate), enter
+// (select), esc (cancel) and ctrl+c (quit) are handled here; every other key is
+// forwarded to the picker's query input, which filters the recursive match list.
+func (m model) handlePickerKey(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if key, ok := msg.(tea.KeyMsg); ok {
+		switch key.String() {
+		case "esc":
 			m.screen = screenMain
-			m.resetFilter()
-			m.focusAfterActivate(name)
+			return m, nil
+		case "ctrl+c":
+			m.action = actionNone
+			return m, tea.Quit
+		case "enter":
+			if path, ok := m.picker.selectedPath(); ok {
+				name := m.pick.name
+				m.commitPath(path)
+				m.screen = screenMain
+				m.resetFilter()
+				m.focusAfterActivate(name)
+			}
+			return m, nil
+		case "up":
+			m.picker.move(-1)
+			return m, nil
+		case "down":
+			m.picker.move(1)
+			return m, nil
 		}
-		return m, nil
-	case "right", "l":
-		m.picker.descend()
-		return m, nil
-	case "left", "h":
-		m.picker.parent()
-		return m, nil
-	case "up", "ctrl+k", "ctrl+p":
-		m.picker.move(-1)
-		return m, nil
-	case "down", "ctrl+j", "ctrl+n":
-		m.picker.move(1)
-		return m, nil
-	case "backspace", "ctrl+h":
-		if !m.picker.backspace() {
-			m.picker.parent()
-		}
-		return m, nil
 	}
-	if msg.Type == tea.KeyRunes {
-		m.picker.pushFilter(string(msg.Runes))
-		return m, nil
-	}
-	if msg.Type == tea.KeySpace {
-		m.picker.pushFilter(" ")
-		return m, nil
-	}
-	return m, nil
+	p, cmd := m.picker.update(msg)
+	m.picker = p
+	return m, cmd
 }
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -184,8 +171,6 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleConfirmKey(msg)
 	case screenEnum:
 		return m.handleEnumKey(msg)
-	case screenSub:
-		return m.handleSubKey(msg)
 	}
 
 	if m.editing {
@@ -314,7 +299,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // enterFocused activates the focused preview token. On the empty-option slot
 // it activates the Options-list selection, or, when nothing is selected, moves
-// to and activates the first positional.
+// to and activates the first positional. On a subcommand token it sets the
+// highlighted subcommand.
 func (m *model) enterFocused() tea.Cmd {
 	t, ok := m.focusedToken()
 	if !ok {
@@ -322,7 +308,10 @@ func (m *model) enterFocused() tea.Cmd {
 	}
 	switch t.kind {
 	case pvSub, pvVerb:
-		return m.openSubAt(t.subLevel)
+		if r, ok := m.selectedRow(); ok && r.kind == rowSub {
+			m.chooseSubAt(t.subLevel, r.subIdx)
+		}
+		return nil
 	case pvEmpty:
 		if r, ok := m.selectedRow(); ok && r.opt != nil {
 			return m.activateOption(r.opt.OptName())
@@ -332,22 +321,26 @@ func (m *model) enterFocused() tea.Cmd {
 				return m.activateToken(ft)
 			}
 		}
-		if m.pendingSub() {
-			return m.openSub()
-		}
+		m.focusPendingSub()
 		return nil
 	}
 	return m.activateToken(t)
 }
 
-// syncFilterCursor selects the first matching option while the empty-option
-// slot is focused, so Enter adds it; with no filter or no match the selection
-// is cleared.
+// syncFilterCursor selects the first matching list entry while a filterable
+// token (the empty-option slot or a subcommand) is focused, so Enter adds it;
+// with no filter or no match the selection is cleared.
 func (m *model) syncFilterCursor() {
-	if t, ok := m.focusedToken(); !ok || t.kind != pvEmpty {
+	t, ok := m.focusedToken()
+	if !ok {
 		return
 	}
-	if m.filter == "" || len(m.filtered()) == 0 {
+	switch t.kind {
+	case pvEmpty, pvSub, pvVerb:
+	default:
+		return
+	}
+	if m.filter == "" || len(m.rows()) == 0 {
 		m.cursor = -1
 		return
 	}

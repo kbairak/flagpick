@@ -192,6 +192,19 @@ func (m *model) focusFirstPositional() bool {
 	return false
 }
 
+// focusPendingSub moves focus to the deepest SUBCOMMAND placeholder, reporting
+// whether one exists.
+func (m *model) focusPendingSub() bool {
+	toks := m.previewTokens()
+	for i := len(toks) - 1; i >= 0; i-- {
+		if toks[i].kind == pvSub {
+			m.focus = i
+			return true
+		}
+	}
+	return false
+}
+
 // focusAfterActivate moves focus after an option has been applied: to the next
 // positional when a positional was just filled, otherwise to the empty-option
 // slot.
@@ -234,28 +247,43 @@ func (m model) focusedIsPositional() bool {
 }
 
 // focusedIsSub reports whether the focused token is a subcommand placeholder or
-// verb, in which case the option list is hidden.
+// verb, in which case the option list shows that level's subcommands.
 func (m model) focusedIsSub() bool {
 	t, ok := m.focusedToken()
 	return ok && (t.kind == pvSub || t.kind == pvVerb)
 }
 
-// descriptionOption returns the option whose description should be shown: the
-// focused token's option when it is a flag or positional, otherwise the
-// Options-list selection.
-func (m model) descriptionOption() (Option, bool) {
+// focusedSubLevel returns the subcommand depth of the focused subcommand token,
+// reporting whether the focused token is a subcommand at all.
+func (m model) focusedSubLevel() (int, bool) {
+	t, ok := m.focusedToken()
+	if !ok || (t.kind != pvSub && t.kind != pvVerb) {
+		return 0, false
+	}
+	return t.subLevel, true
+}
+
+// descriptionText returns the description to show in the Description pane: the
+// focused token's option, else the Options-list selection (a flag/positional or
+// a subcommand).
+func (m model) descriptionText() (string, bool) {
 	if t, ok := m.focusedToken(); ok {
 		if t.flag != nil {
-			return t.flag, true
+			return t.flag.OptDescription(), true
 		}
 		if t.pos != nil {
-			return t.pos, true
+			return t.pos.OptDescription(), true
 		}
 	}
-	if r, ok := m.selectedRow(); ok && r.opt != nil {
-		return r.opt, true
+	if r, ok := m.selectedRow(); ok {
+		if r.kind == rowSub && r.sub != nil {
+			return r.sub.Description, true
+		}
+		if r.opt != nil {
+			return r.opt.OptDescription(), true
+		}
 	}
-	return nil, false
+	return "", false
 }
 
 // focusNamed puts the focus on the first token backed by name, falling back to

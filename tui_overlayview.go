@@ -86,7 +86,7 @@ func (m model) helpView() string {
 		"",
 		"tab / shift-tab move focus between preview tokens",
 		"enter           edit / activate the focused token",
-		"any printable   fuzzy-filter options",
+		"any printable   fuzzy-filter options or subcommands",
 		"backspace       delete focused token / filter char",
 		"ctrl-w          delete last filter word",
 		"ctrl-j / ctrl-k move the option list selection",

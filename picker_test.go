@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestPickerBrowseAndFilter(t *testing.T) {
+func TestPickerRecursiveFilter(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
@@ -19,50 +21,39 @@ func TestPickerBrowseAndFilter(t *testing.T) {
 	}
 
 	p := newPicker(dir)
-	if len(p.visible()) != 4 { // "..", sub/, alpha.txt, beta.log
-		t.Fatalf("visible = %d, want 4", len(p.visible()))
-	}
-	if e := p.visible()[1]; e.name != "sub" || !e.dir {
-		t.Fatalf("entry[1] = %#v, want sub dir", e)
+	if len(p.matches) != 4 { // sub/, alpha.txt, beta.log, sub/inner.txt
+		t.Fatalf("matches = %d, want 4", len(p.matches))
 	}
 
-	// Fuzzy filter.
-	p.pushFilter("bt")
-	got := p.visible()
-	if len(got) != 1 || got[0].name != "beta.log" {
-		t.Fatalf("filter bt -> %#v, want [beta.log]", got)
+	// Filtering recurses into subfolders: "inner" matches sub/inner.txt.
+	p, _ = p.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("inner")})
+	if len(p.matches) != 1 || p.matches[0].entry.path != "sub/inner.txt" {
+		t.Fatalf("filter inner -> %#v, want [sub/inner.txt]", p.matches)
+	}
+	if path, ok := p.selectedPath(); !ok || path != filepath.Join(dir, "sub", "inner.txt") {
+		t.Fatalf("selectedPath = %q, %v", path, ok)
 	}
 
-	// Backspace empties the filter again.
-	b1 := p.backspace()
-	b2 := p.backspace()
-	if !b1 || !b2 {
-		t.Fatal("backspace did not consume both runes")
+	// Backspace is forwarded to the query and widens the filter again.
+	p, _ = p.update(tea.KeyMsg{Type: tea.KeyBackspace})
+	if p.filter != "inne" {
+		t.Fatalf("filter = %q, want inne", p.filter)
 	}
-	if p.filter != "" || p.backspace() {
-		t.Fatal("filter should be empty")
-	}
+}
 
-	// Descend into sub/.
-	p.pushFilter("sub")
-	p.descend()
-	if p.dir != filepath.Join(dir, "sub") {
-		t.Fatalf("dir = %q, want sub", p.dir)
+func TestPickerMoveClamps(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a", "b", "c"} {
+		_ = os.WriteFile(filepath.Join(dir, name), nil, 0o644)
 	}
-	if p.filter != "" {
-		t.Fatal("filter should reset on descend")
+	p := newPicker(dir)
+	p.move(-1)
+	if p.cursor != 0 {
+		t.Fatalf("cursor = %d, want 0", p.cursor)
 	}
-	path, ok := p.selectedPath()
-	if !ok || path != filepath.Join(dir, "sub", "inner.txt") {
-		t.Fatalf("selectedPath = %q, %v; want inner.txt", path, ok)
-	}
-
-	// Parent back out.
-	if !p.parent() {
-		t.Fatal("parent returned false")
-	}
-	if p.dir != dir {
-		t.Fatalf("dir = %q, want %q", p.dir, dir)
+	p.move(10)
+	if p.cursor != len(p.matches)-1 {
+		t.Fatalf("cursor = %d, want %d", p.cursor, len(p.matches)-1)
 	}
 }
 
